@@ -152,7 +152,7 @@ packages:
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
   '@teacher-dsh/artifact-sdk@file:.teacher/artifact-sdk.tgz':
-    resolution: {integrity: sha512-U8tiNerFV1k0xLNwLEHOy8YB+MA37J0sonshVc/nVP7a7cptUPjtS5zk02kDjghPKferljvtkGa51to3CML2BA==, tarball: file:.teacher/artifact-sdk.tgz}
+    resolution: {integrity: sha512-cKKVEYsH9+Xu9naX1I/WMsrus3YGxVVnG/sAW0OV7u77NfvUXG6k1JyPtMqyM+2TF84sMrpON+f7Ny/YAszdgw==, tarball: file:.teacher/artifact-sdk.tgz}
     version: 0.1.0
 
   '@types/d3-array@3.2.2':

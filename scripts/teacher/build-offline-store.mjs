@@ -12,4 +12,6 @@ function run(cmd, args, cwd) {
 }
 
 run('pnpm', ['install', '--filter', '@teacher-dsh/artifact-cli', '--filter', '@teacher-dsh/artifact-sdk'], teacher);
-console.log('Offline store seeded.');
+run('node', ['scripts/build-toolchain.mjs'], teacher);
+run('node', ['scripts/build-template-lockfiles.mjs'], teacher);
+console.log('Offline store seeded and template lockfiles refreshed.');

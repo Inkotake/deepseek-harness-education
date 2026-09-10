@@ -23,6 +23,7 @@ import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
 } from './desktop-runtime-environment.ts'
+import { installTeacherRuntime } from './teacher-bootstrap.ts'
 import { desktopProductVersion, ElectronDesktopRuntime } from './electron-runtime.ts'
 import { getOrCreateDesktopInstallationId } from './desktop-installation-id.ts'
 import {
@@ -676,6 +677,12 @@ async function start(): Promise<void> {
       stateDir: join(app.getPath('userData'), 'runtime-commands'),
       environment: process.env,
     })
+    const teacherRuntime = installTeacherRuntime({
+      importMetaUrl: import.meta.url,
+      stateDir: join(app.getPath('userData'), 'teacher-runtime'),
+      environment: process.env,
+    })
+    const releaseTeacherRuntime = generation.own(() => { teacherRuntime.dispose() })
     const dshBootstrapPath = fileURLToPath(new URL('./desktop-cli.js', import.meta.url))
     const releasePnpmRuntime = generation.own(() => { pnpmRuntime.dispose() })
     const selectionStatePath = join(profileUserDataDir, 'profile-selection', 'state.json')

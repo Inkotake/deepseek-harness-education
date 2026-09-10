@@ -1,14 +1,22 @@
 {
   "name": "@teacher-dsh/publish-cli",
   "version": "0.1.0",
-  "description": "Teacher DSH static publishing CLI with provider discovery, ranking, and deployment",
+  "description": "Teacher DSH static publishing CLI: artifact inspection, capability-aware provider planning, verified anonymous and persistent deployment, and remote verification",
   "type": "module",
   "bin": {
     "teacher-publish": "./bin/teacher-publish.mjs"
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "config",
+    "docs",
+    "tools"
   ],
+  "scripts": {
+    "smoke": "node tools/smoke.mjs",
+    "check:imports": "node tools/check-imports.mjs",
+    "probe": "node tools/probe-contracts.mjs"
+  },
   "license": "MIT"
 }

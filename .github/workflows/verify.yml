@@ -21,11 +21,11 @@ jobs:
           yarn check
       - name: Teacher distribution checks
         run: node scripts/teacher/verify-distribution.mjs
+      - name: Build artifact SDK tarball
+        run: node teacher/scripts/build-toolchain.mjs
       - name: Teacher artifact smoke
-        run: |
-          cd teacher/legacy
-          node tests/smoke/run-all.mjs
-      - name: PPT smoke
+        run: node tests/smoke/run-all.mjs
+      - name: PPT smoke (legacy reference)
         run: |
           cd teacher/legacy
           node tests/ppt/smoke-ppt.mjs

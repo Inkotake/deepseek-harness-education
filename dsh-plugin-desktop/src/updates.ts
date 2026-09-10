@@ -30,7 +30,7 @@ export interface Config {
 
 /** Validated scheduled update policy. */
 export const Config: z<Config> = z.object({
-  enabled: z.boolean().default(true),
+  enabled: z.boolean().default(false), // Teacher DSH 0.1: auto OTA disabled
   initialDelayMs: z.number().step(1).min(0).max(MAX_TIMER_DELAY_MS).default(60_000),
   intervalMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(6 * 60 * 60 * 1000),
   requestTimeoutMs: z.number().step(1).min(1).max(MAX_TIMER_DELAY_MS).default(15_000),

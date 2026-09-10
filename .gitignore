@@ -19,3 +19,12 @@ teacher/**/node_modules/
 teacher/**/dist/
 teacher/**/*.tgz
 teacher/legacy/node_modules/
+
+# Teacher DSH build outputs. Everything below is produced by scripts/teacher/*.mjs from the
+# pinned inputs in teacher/ and resources/teacher-seed/plugins, and is staged into the installer
+# by electron-builder's extraResources. Never commit it.
+build/
+resources/dsh-runtime/
+resources/teacher-runtime/
+resources/teacher-seed/plugins-built/
+licenses/

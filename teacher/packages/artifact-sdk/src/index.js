@@ -5,13 +5,25 @@ export {
 } from './stage.js';
 
 export {
+  createTeachingApp
+} from './app.js';
+
+export {
+  createButton,
   createSlider,
   createPanel,
   createInfoCard,
   createFullscreenButton,
   createResetButton,
-  createTeacherToolbar,
   createPauseButton,
+  createToggle,
+  createSelect,
+  createReadout,
+  createStepControls,
+  createLegend,
+  createLoadingIndicator,
+  createErrorOverlay,
+  createTeacherToolbar,
   createLabel
 } from './ui.js';
 

@@ -1,0 +1,209 @@
+name: Teacher DSH distribution
+
+# One pipeline for the complete Teacher DSH 0.1 distribution. It deliberately does not test
+# whether development sources run: it tests whether the *installer* runs.
+#
+#   verify          - static distribution gates (manifests, skills, licenses, templates, plugins)
+#   package-windows - build the bundled runtime, then electron-builder Setup + Portable
+#   smoke-package   - run the packaged application payload and produce a real artifact + pptx
+#
+# Upgrade rule: a newer upstream Harness or plugin is a separate, tested change. Old pins must
+# stay buildable.
+
+on:
+  pull_request:
+    branches: [main, teacher-dsh-0.1]
+  push:
+    branches: [main, teacher-dsh-0.1]
+    tags: ['v*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: teacher-distribution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DSH_TELEMETRY_DISABLED: '1'
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # The Windows installer is unsigned in CI; Authenticode is a separate release step.
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  verify:
+    name: verify
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install the desktop workspace
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack yarn install --immutable
+
+      - name: Desktop gate
+        shell: pwsh
+        run: corepack yarn check
+
+      - name: Teacher manifests and own Skills
+        shell: pwsh
+        run: node scripts/teacher/verify-distribution.mjs
+
+      - name: Build the artifact SDK tarball
+        shell: pwsh
+        run: node teacher/scripts/build-toolchain.mjs
+
+      - name: Skill validation
+        shell: pwsh
+        run: node scripts/teacher/verify-skills.mjs
+
+      - name: Vendor plugin pins are present
+        shell: pwsh
+        run: node scripts/teacher/verify-plugins.mjs
+
+      - name: Artifact templates build
+        shell: pwsh
+        run: node tests/smoke/run-all.mjs
+
+      - name: Presentation toolkit
+        shell: pwsh
+        run: node tests/ppt/run-ppt-smoke.mjs
+
+      - name: Build the bundled runtime
+        shell: pwsh
+        run: node scripts/teacher/build-teacher-runtime.mjs
+
+      - name: License inventory
+        shell: pwsh
+        run: node scripts/teacher/build-notices.mjs
+
+      - name: License validation
+        shell: pwsh
+        run: node scripts/teacher/verify-licenses.mjs
+
+  package-windows:
+    name: package-windows
+    needs: verify
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install the desktop workspace
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack yarn install --immutable
+
+      - name: Build the bundled Teacher runtime
+        shell: pwsh
+        run: node scripts/teacher/build-teacher-runtime.mjs
+
+      - name: Build the three vendor plugins
+        shell: pwsh
+        run: node scripts/teacher/build-vendor-plugins.mjs
+
+      - name: Build the profile seed
+        shell: pwsh
+        run: |
+          corepack yarn workspace dsh-plugin-desktop build
+          node scripts/teacher/build-profile-seed.mjs
+
+      - name: Generate distribution notices
+        shell: pwsh
+        run: node scripts/teacher/build-notices.mjs
+
+      - name: Package Windows Setup (NSIS)
+        shell: pwsh
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+        run: corepack yarn workspace dsh-plugin-desktop dist:win
+
+      - name: Package Windows Portable (ZIP)
+        shell: pwsh
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+        run: corepack yarn workspace dsh-plugin-desktop dist:win-portable
+
+      - name: Collect installers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-artifacts | Out-Null
+          Copy-Item dsh-plugin-desktop/dist/*.exe dist-artifacts/ -ErrorAction SilentlyContinue
+          Copy-Item dsh-plugin-desktop/dist/*.zip dist-artifacts/ -ErrorAction SilentlyContinue
+          Get-ChildItem dist-artifacts | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: teacher-dsh-windows-x64
+          path: dist-artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke-package:
+    name: smoke-package
+    needs: package-windows
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: teacher-dsh-windows-x64
+          path: dist-artifacts
+
+      - name: Install the desktop workspace
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack yarn install --immutable
+
+      - name: Build the bundled runtime and seed for the smoke payload
+        shell: pwsh
+        run: |
+          node scripts/teacher/build-teacher-runtime.mjs
+          corepack yarn workspace dsh-plugin-desktop build
+          node scripts/teacher/build-profile-seed.mjs
+
+      - name: Build the unpacked application
+        shell: pwsh
+        env:
+          DSH_PACKAGE_CHECK_ALREADY_RAN: '1'
+        run: node dsh-plugin-desktop/node_modules/electron-builder/cli.js --dir --config.npmRebuild=false
+
+      - name: Run the packaged smoke
+        shell: pwsh
+        run: node scripts/teacher/smoke-package.mjs --json
+
+      - name: Unpack the Portable archive and smoke it
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem dist-artifacts/*.zip | Select-Object -First 1
+          if ($null -eq $zip) { throw 'no Portable archive was produced' }
+          node scripts/teacher/smoke-portable.mjs --archive $zip.FullName --json

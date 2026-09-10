@@ -1,10 +1,18 @@
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background: #05070f;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
 }
-#stage {
-  width: 100vw;
-  height: 100vh;
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+/* CSS2DRenderer 生成的标签层不参与命中测试，交互交给 canvas。 */
+.tdsh-app .tdsh-stage > div[style*="pointer-events"] {
+  pointer-events: none !important;
 }

@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-desktop",
-  "version": "2.0.5",
-  "description": "DSH Desktop: an Electron shell composed as a DeepSeek Harness Cordis plugin",
+  "version": "0.1.0",
+  "description": "Teacher DSH: an Electron shell composed as a DeepSeek Harness Cordis plugin, carrying a complete offline teacher toolchain",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -323,6 +323,22 @@
       "node_modules/**"
     ],
     "afterPack": "./scripts/verify-packaged-runtime.ts",
+    "extraResources": [
+      {
+        "from": "../resources/dsh-runtime",
+        "to": "dsh-runtime",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../resources/teacher-runtime",
+        "to": "teacher-runtime",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "electronFuses": {
       "runAsNode": true
     },

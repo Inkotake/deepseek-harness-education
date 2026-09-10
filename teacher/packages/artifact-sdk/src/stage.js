@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTeacherToolbar } from './ui.js';
+import { createErrorOverlay, createTeacherToolbar } from './ui.js';
 import { TEACHER_UI } from './constants.js';
 
 /**
@@ -39,15 +39,48 @@ export function createStage(options = {}) {
   camera.position.set(...cameraPosition);
   camera.lookAt(...cameraLookAt);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
   const container = typeof mount === 'string' ? document.querySelector(mount) : mount;
   if (!container) {
     throw new Error('[artifact-sdk] createStage: mount element not found');
   }
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+  } catch (cause) {
+    // A missing WebGL context must never produce a blank screen in a classroom.
+    const overlay = createErrorOverlay({
+      title: '无法启动 3D 显示',
+      detail:
+        '当前环境没有可用的 WebGL。请尝试：更新显卡驱动、在浏览器设置中开启硬件加速，'
+        + `或改用其他浏览器/设备打开该教具。（技术信息：${cause && cause.message ? cause.message : cause}）`,
+      container
+    });
+    return {
+      renderer: null,
+      scene,
+      camera,
+      controls: null,
+      lights: {},
+      clock: new THREE.Clock(),
+      container,
+      mount: container,
+      failed: true,
+      error: cause,
+      errorOverlay: overlay,
+      start() {},
+      stop() {},
+      resize() {},
+      reset() {},
+      onReset() {},
+      onUpdate() {},
+      dispose() { overlay.hide(); }
+    };
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
   container.style.position = container.style.position || 'relative';
   container.style.width = '100%';
   container.style.height = '100vh';

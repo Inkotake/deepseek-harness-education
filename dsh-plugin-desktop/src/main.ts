@@ -23,7 +23,8 @@ import {
   installDesktopDshRuntime,
   installDesktopPnpmRuntime,
 } from './desktop-runtime-environment.ts'
-import { installTeacherRuntime } from './teacher-bootstrap.ts'
+import { installTeacherRuntime, teacherResourcesRoot } from './teacher-bootstrap.ts'
+import { materializeTeacherProfileSeed } from './teacher-profile-seed.ts'
 import { desktopProductVersion, ElectronDesktopRuntime } from './electron-runtime.ts'
 import { getOrCreateDesktopInstallationId } from './desktop-installation-id.ts'
 import {
@@ -678,11 +679,24 @@ async function start(): Promise<void> {
       environment: process.env,
     })
     const teacherRuntime = installTeacherRuntime({
-      importMetaUrl: import.meta.url,
+      resourcesRoot: teacherResourcesRoot(process.resourcesPath, import.meta.url),
       stateDir: join(app.getPath('userData'), 'teacher-runtime'),
+      appExecutable: process.execPath,
       environment: process.env,
     })
     const releaseTeacherRuntime = generation.own(() => { teacherRuntime.dispose() })
+
+    // First run only: materialise the bundled Teacher profile seed (the desktop profile with the
+    // pinned vendor plugins already installed). This must happen before anything else touches the
+    // Harness home, because every later bootstrap step creates the profile if it is missing.
+    // Existing user data is never overwritten, and nothing is installed from the network.
+    const teacherSeed = materializeTeacherProfileSeed({ runtimeRoot: teacherRuntime.runtimeRoot, homeDir })
+    if (teacherSeed.reason === 'seed-incomplete' || teacherSeed.reason === 'no-seed') {
+      electronLogger.error(
+        `dsh-plugin-desktop: bundled Teacher profile seed is unavailable (${teacherSeed.reason}) at `
+        + `${teacherSeed.seedDir}; falling back to the ordinary profile bootstrap.`,
+      )
+    }
     const dshBootstrapPath = fileURLToPath(new URL('./desktop-cli.js', import.meta.url))
     const releasePnpmRuntime = generation.own(() => { pnpmRuntime.dispose() })
     const selectionStatePath = join(profileUserDataDir, 'profile-selection', 'state.json')
@@ -1303,6 +1317,17 @@ async function start(): Promise<void> {
           () => releasePnpmRuntime,
           'dsh-plugin-desktop: packaged pnpm runtime PATH',
         )
+        hostCtx.effect(
+          () => releaseTeacherRuntime,
+          'dsh-plugin-desktop: bundled teacher runtime PATH',
+        )
+        hostCtx.provide('teacherRuntime', {
+          pathDir: teacherRuntime.pathDir,
+          runtimeRoot: teacherRuntime.runtimeRoot,
+          dshRuntimeRoot: teacherRuntime.dshRuntimeRoot,
+          nodeExecutable: teacherRuntime.nodeExecutable,
+          pnpmEntry: teacherRuntime.pnpmEntry,
+        })
         if (dshRuntime !== undefined) {
           hostCtx.effect(
             () => releaseDshRuntime,

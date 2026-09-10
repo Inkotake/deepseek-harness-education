@@ -150,10 +150,22 @@ describe('pre-Host recovery plugin uninstall command', () => {
       chmodSync(systemCommand, 0o700)
     }
 
+    // A released runtime yields its own PATH but keeps the standard Windows
+    // shell variables every real process inherits; upstream `dsh plugin`
+    // reaches pnpm through `spawnSync(..., { shell: true })`, which resolves
+    // the shell from ComSpec (and needs SystemRoot/PATHEXT for a usable one).
+    const windowsShell = process.platform === 'win32'
+      ? {
+          ComSpec: process.env.ComSpec ?? 'cmd.exe',
+          SystemRoot: process.env.SystemRoot ?? 'C:\\Windows',
+          PATHEXT: process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD',
+        }
+      : {}
     await expect(removeRecoveryPlugin({
       ...base,
       dshBootstrapPath,
       environment: {
+        ...windowsShell,
         PATH: systemBin,
         PNPM_SELECTION_MARKER: selectedMarker,
       },

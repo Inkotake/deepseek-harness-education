@@ -315,6 +315,7 @@
     "appId": "com.teacherdsh.desktop",
     "productName": "Teacher DSH",
     "asar": true,
+    "compression": "maximum",
     "asarUnpack": [
       "package.json",
       "cordis.patch.yml",

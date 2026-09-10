@@ -19,6 +19,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import { pruneRuntimeTree } from './build-teacher-runtime.mjs'
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DESKTOP = path.join(ROOT, 'dsh-plugin-desktop')
 const TEACHER_RUNTIME = path.join(ROOT, 'resources', 'teacher-runtime')
@@ -60,15 +62,70 @@ const SETTINGS = [
 /**
  * Trim a prebuilt plugin tree to what a Windows x64 installation actually loads.
  *
- * Everything removed here is either a build artifact (source maps, debug symbols), a type-only
- * declaration for an editor, or a native binary for a platform this distribution does not ship.
- * No runtime JavaScript entry point is touched.
+ * The plugin trees share `pruneRuntimeTree` with `build-teacher-runtime.mjs` instead of keeping
+ * a second copy of the rules, so the seed plugin trees and the `artifact`/`ppt`/`deploy` trees
+ * can never drift apart. Every removal is still guarded by the package manifest: a path the
+ * plugin publishes is refused.
  */
 function prunePluginTree(root) {
-  const before = directorySize(root)
-  /** Directory names that only ever hold another platform's native payload. */
-  const foreignPlatform = /^(darwin|linux|freebsd|openbsd|netbsd|sunos|android|win32-arm64|win32-ia32|wasm32)/u
-  let removed = 0
+  pruneRuntimeTree(root, { label: path.basename(root), log, warn })
+}
+
+/**
+ * Payload that only a bundled vendor plugin carries, and that static recon proved dead.
+ *
+ * Every entry removes a bundled dependency whose code the plugin's own client bundle already
+ * inlines (`lib/*.js` is what the Host serves), or an empty scope directory. The removal is
+ * guarded, never assumed: it happens only when no shipped JavaScript file of the plugin
+ * resolves the package with a bare specifier — static (`from 'x'`, `require('x')`,
+ * `import('x')`) or dynamic (`createRequire(...).resolve('x')`). A future plugin build that
+ * starts importing the package again therefore keeps its copy.
+ */
+const PLUGIN_DEAD_PAYLOAD = new Map([
+  ['dsh-better-sidebar', [
+    {
+      path: 'node_modules/react-icons',
+      specifier: 'react-icons',
+      reason: 'inlined into lib/client.js and lib/client-registry.js'
+    },
+    {
+      path: 'node_modules/mermaid',
+      specifier: 'mermaid',
+      reason: 'inlined into lib/client-mermaid.js, which stays in the package'
+    },
+    {
+      path: 'node_modules/@xterm',
+      onlyIfEmpty: true,
+      reason: 'empty scope directory'
+    }
+  ]],
+  ['@dsh-cowork/plugin', [
+    {
+      path: 'node_modules/@napi-rs',
+      specifier: '@napi-rs/canvas',
+      reason:
+        'optional pdf.js page-render dependency. @dsh-cowork/core only calls getDocument + '
+        + 'getTextContent and never calls page.render, so the Skia canvas is loaded but its '
+        + 'capability is never exercised. Verified empirically: reading a PDF through the real '
+        + 'readDocument with @napi-rs/canvas made unresolvable returns byte-identical text, '
+        + 'with only pdf.js "rendering may be broken" warnings.'
+    }
+  ]]
+])
+
+const PLUGIN_SCRIPT_EXTENSIONS = /\.(?:js|mjs|cjs)$/u
+
+/** Plugin package names its shipped JavaScript resolves with a bare specifier. */
+function bareSpecifiersIn(root, names) {
+  const found = new Set()
+  const patterns = [...names].map(name => [
+    name,
+    new RegExp(
+      `(?:from|require|import|resolve)\\s*\\(?\\s*['"]`
+      + `${name.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(?:/[^'"]*)?['"]`,
+      'u'
+    )
+  ])
   const stack = [root]
   while (stack.length > 0) {
     const current = stack.pop()
@@ -78,33 +135,82 @@ function prunePluginTree(root) {
     } catch {
       continue
     }
-    const inPrebuilds = /[\\/]prebuilds$/u.test(current)
     for (const entry of entries) {
+      // Only the package's own shipped files matter; node_modules is what we are pruning.
+      if (entry.name === 'node_modules') continue
       const full = path.join(current, entry.name)
-      if (entry.isSymbolicLink()) {
-        warn(`unexpected symlink in plugin tree: ${full}`)
-        continue
-      }
       if (entry.isDirectory()) {
-        if (inPrebuilds && foreignPlatform.test(entry.name)) {
-          fs.rmSync(full, { recursive: true, force: true })
-          removed += 1
-          continue
-        }
         stack.push(full)
         continue
       }
-      if (/\.(map|pdb)$/iu.test(entry.name)) {
-        fs.rmSync(full, { force: true })
-        removed += 1
+      if (!entry.isFile() || !PLUGIN_SCRIPT_EXTENSIONS.test(entry.name)) continue
+      let text
+      try {
+        text = fs.readFileSync(full, 'utf8')
+      } catch {
+        continue
+      }
+      for (const [name, pattern] of patterns) {
+        if (pattern.test(text)) found.add(name)
       }
     }
   }
-  const after = directorySize(root)
-  log(
-    `pruned ${path.basename(root)}: ${removed} entries, `
-    + `${(before.bytes / 1024 / 1024).toFixed(1)} MB -> ${(after.bytes / 1024 / 1024).toFixed(1)} MB`,
-  )
+  return found
+}
+
+/** True when `dir` holds no files at all, recursively. */
+function isFileFreeTree(dir) {
+  const stack = [dir]
+  while (stack.length > 0) {
+    const current = stack.pop()
+    let entries
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true })
+    } catch {
+      return false
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) return false
+      if (entry.isDirectory()) {
+        stack.push(path.join(current, entry.name))
+        continue
+      }
+      if (entry.isFile()) return false
+    }
+  }
+  return true
+}
+
+/** Remove the plugin-only dead payload `PLUGIN_DEAD_PAYLOAD` declares for `packageName`. */
+function prunePluginDeadPayload(root, packageName) {
+  const candidates = PLUGIN_DEAD_PAYLOAD.get(packageName) ?? []
+  if (candidates.length === 0) return
+  const named = candidates.filter(entry => entry.specifier !== undefined).map(entry => entry.specifier)
+  const referenced = named.length === 0 ? new Set() : bareSpecifiersIn(root, named)
+  for (const candidate of candidates) {
+    const target = path.join(root, candidate.path)
+    if (!fs.existsSync(target)) continue
+    const stat = fs.lstatSync(target)
+    if (stat.isSymbolicLink()) {
+      warn(`symlink/junction found, leaving it alone: ${target}`)
+      continue
+    }
+    if (!stat.isDirectory()) continue
+    if (candidate.specifier !== undefined && referenced.has(candidate.specifier)) {
+      log(`SKIP (bare specifier present): ${packageName} ${candidate.path}`)
+      continue
+    }
+    if (candidate.onlyIfEmpty === true && !isFileFreeTree(target)) {
+      log(`SKIP (not empty): ${packageName} ${candidate.path}`)
+      continue
+    }
+    const before = directorySize(target)
+    fs.rmSync(target, { recursive: true, force: true })
+    log(
+      `removed ${packageName}/${candidate.path}: `
+      + `${(before.bytes / 1024 / 1024).toFixed(1)} MB, ${before.files} files — ${candidate.reason}`
+    )
+  }
 }
 
 /** The machine-wide patch is intentionally empty: vendor plugins mount through their bundles. */
@@ -151,6 +257,7 @@ async function main() {
     fs.rmSync(target, { recursive: true, force: true })
     fs.cpSync(source, target, { recursive: true, dereference: true })
     prunePluginTree(target)
+    prunePluginDeadPayload(target, plugin.packageName)
     const entry = readJson(path.join(target, 'package.json'))
     const main = path.join(target, entry.main ?? 'index.js')
     if (!fs.existsSync(main)) {

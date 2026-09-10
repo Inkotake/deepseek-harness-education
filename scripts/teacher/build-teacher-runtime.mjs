@@ -148,6 +148,409 @@ function reportSize(label, dir) {
   log(`${label}: ${(bytes / 1024 / 1024).toFixed(1)} MB, ${files} files`)
 }
 
+// ---------------------------------------------------------------------------
+// pruning
+// ---------------------------------------------------------------------------
+
+/**
+ * Platform suffixes npm gives prebuilt native packages. Every flavour except the Windows x64
+ * one is dead weight in this distribution, which only ever runs on win32-x64.
+ */
+const FOREIGN_PLATFORM_SUFFIXES = [
+  '-darwin-x64', '-darwin-arm64', '-linux-x64', '-linux-arm', '-linux-arm64', '-linux-ia32',
+  '-linux-ppc64', '-linux-riscv64', '-linux-s390x', '-linuxmusl-x64', '-linuxmusl-arm64',
+  '-linux-x64-gnu', '-linux-arm64-gnu', '-freebsd-x64', '-freebsd-ia32', '-freebsd-arm64',
+  '-openbsd-x64', '-openbsd-ia32', '-android-arm64', '-wasm32', '-win32-ia32', '-win32-arm64',
+  '-webcontainers-wasm32'
+]
+
+/** The only `prebuilds/<platform>` directory a Windows x64 distribution can load. */
+const NATIVE_PLATFORM_DIRECTORY = 'win32-x64'
+
+const TEST_DIRECTORY_NAMES = new Set(['test', 'tests', '__tests__', 'spec', '__snapshots__'])
+const DOCUMENTATION_EXTENSIONS = new Set(['.md', '.markdown', '.rst', '.txt', '.pdf'])
+/** Legal files are never pruned; THIRD_PARTY_NOTICES depends on them surviving. */
+const LEGAL_FILE_NAME = /^(?:licen[cs]e|copying|notice)(?:\..*)?$/iu
+const BUILT_OUTPUT_DIRECTORY_NAMES = ['dist', 'lib', 'build']
+const TYPESCRIPT_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts'])
+const MEBIBYTE = 1024 * 1024
+
+/**
+ * Packages whose payload is functionality rather than bloat. No bulk rule may remove anything
+ * from them, and nothing nested inside them either.
+ */
+const PROTECTED_PACKAGES = new Set([
+  '@cloudflare/workerd-windows-64',
+  'miniflare',
+  'wrangler',
+  '@electric-sql/pglite',
+  'typescript',
+  'tsx',
+  'ts-morph',
+  '@img/sharp-win32-x64',
+  'lightningcss',
+  'esbuild',
+  '@esbuild/win32-x64',
+  'rollup',
+  'rolldown',
+  '@rolldown/binding-win32-x64-msvc',
+  'node-pty',
+  '@napi-rs/canvas-win32-x64-msvc'
+])
+const PROTECTED_PACKAGE_PATTERNS = [
+  /^@vercel\/(?:go|rust|python|python-analysis|node|next|static-build|remix-builder|redwood|hydrogen|gatsby-plugin-vercel-builder)$/u,
+  /^@img\/sharp-libvips-/u,
+  /^@rollup\//u,
+  /^@esbuild\//u,
+  /^lightningcss-/u,
+  /^@napi-rs\/.*win32-x64-msvc$/u
+]
+
+function isProtectedPackage(name) {
+  if (name === null) return false
+  return PROTECTED_PACKAGES.has(name) || PROTECTED_PACKAGE_PATTERNS.some(pattern => pattern.test(name))
+}
+
+function lstatOrNull(target) {
+  try {
+    return fs.lstatSync(target)
+  } catch {
+    return null
+  }
+}
+
+/** npm package name declared by `<dir>/package.json`, or null when there is none. */
+function packageNameAt(dir) {
+  const file = path.join(dir, 'package.json')
+  const stat = lstatOrNull(file)
+  if (stat === null || !stat.isFile()) return null
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'))
+    return typeof parsed?.name === 'string' && parsed.name !== '' ? parsed.name : null
+  } catch {
+    return null
+  }
+}
+
+/** package.json fields whose values name a shipped file or directory. */
+const MANIFEST_PATH_FIELDS = ['main', 'module', 'browser', 'types', 'typings', 'bin', 'files']
+
+/**
+ * Normalise a package-relative path for prefix comparison: strip the leading `./`, drop the
+ * trailing wildcard and trailing slashes. `./examples/jsm/*` becomes `examples/jsm`.
+ */
+function normalizeManifestPath(value) {
+  return String(value)
+    .trim()
+    .replaceAll('\\', '/')
+    .replace(/^\.\//u, '')
+    .replace(/\/\*$/u, '')
+    .replace(/\/+$/u, '')
+}
+
+/**
+ * Every path a package.json publishes: entry points, `bin` targets, `files` entries, and the
+ * keys and values of `exports` (including nested condition objects and subpath patterns).
+ */
+function manifestPaths(manifest) {
+  const found = []
+  const visit = (value) => {
+    if (typeof value === 'string') {
+      found.push(value)
+      return
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item)
+      return
+    }
+    if (value === null || typeof value !== 'object') return
+    for (const [key, item] of Object.entries(value)) {
+      // Condition names (`import`, `require`, ...) are not paths; subpath patterns start with `./`.
+      if (key.startsWith('./')) found.push(key)
+      visit(item)
+    }
+  }
+  for (const field of MANIFEST_PATH_FIELDS) visit(manifest[field])
+  visit(manifest.exports)
+  return found
+}
+
+/**
+ * The package.json reference that keeps `relativeTarget` published, or null when the manifest
+ * does not mention it. This is the guard that makes every directory rule safe: a path the
+ * package itself resolves or ships is never removed.
+ */
+function manifestReferenceInside(packageDir, relativeTarget) {
+  const target = normalizeManifestPath(relativeTarget)
+  if (target === '' || target === '*') return null
+  let manifest
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(packageDir, 'package.json'), 'utf8'))
+  } catch {
+    return null
+  }
+  for (const reference of manifestPaths(manifest)) {
+    const normalized = normalizeManifestPath(reference)
+    if (normalized === '') continue
+    if (normalized === '*') return `${reference} publishes the package root`
+    if (normalized === target || normalized.startsWith(`${target}/`)) return reference
+  }
+  return null
+}
+
+function hasForeignPlatformSuffix(name) {
+  const lower = name.toLowerCase()
+  return FOREIGN_PLATFORM_SUFFIXES.some(suffix => lower.endsWith(suffix))
+}
+
+/**
+ * True when every file under `dir` (recursively) is a TypeScript source. Any JavaScript, any
+ * declaration-free asset, or any symlink makes this false, which keeps the directory.
+ */
+function isTypeScriptOnlyTree(dir) {
+  let files = 0
+  const stack = [dir]
+  while (stack.length > 0) {
+    const current = stack.pop()
+    let entries
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true })
+    } catch {
+      return false
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) return false
+      if (entry.isDirectory()) {
+        stack.push(path.join(current, entry.name))
+        continue
+      }
+      if (!entry.isFile()) return false
+      if (!TYPESCRIPT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) return false
+      files += 1
+    }
+  }
+  return files > 0
+}
+
+/**
+ * Conservatively prune a built runtime tree in place.
+ *
+ * Every rule removes payload no runtime code path can reach: JavaScript source maps, Windows
+ * debug symbols, package-local test directories, native packages for platforms this
+ * distribution never runs on, TypeScript sources that already have a built counterpart, and
+ * bulky documentation. Every directory removal is first checked against the owning package's
+ * `package.json` and refused when the manifest publishes the path. `LICENSE`/`LICENCE`/
+ * `COPYING`/`NOTICE` files always survive.
+ *
+ * `options.mapsOnly` restricts the tree to rules 1 and 2 (source maps and debug symbols), which
+ * is what the deploy CLIs require: their functionality must stay byte-for-byte complete.
+ *
+ * Symlinks and junctions are reported and never followed or deleted. The function is
+ * idempotent: a second run removes nothing and reports zero removals.
+ *
+ * @param {string} dir Tree to prune.
+ * @param {object} [options]
+ * @param {string} [options.label] Name used in log lines, defaults to the directory basename.
+ * @param {boolean} [options.mapsOnly] Only remove `*.map`/`*.pdb`; skip every other rule.
+ * @param {number} [options.largeDocBytes] Documentation size limit for package roots.
+ * @param {(message: string) => void} [options.log]
+ * @param {(message: string) => void} [options.warn]
+ * @returns {{label: string, removed: number, removedByRule: Record<string, number>,
+ *   refusals: number, before: {bytes: number, files: number},
+ *   after: {bytes: number, files: number}, symlinks: number}}
+ */
+function pruneRuntimeTree(dir, options = {}) {
+  const label = options.label ?? path.basename(dir)
+  const logStep = options.log ?? log
+  const warnStep = options.warn ?? warn
+  const mapsOnly = options.mapsOnly === true
+  const largeDocBytes = options.largeDocBytes ?? 5 * MEBIBYTE
+  const removedByRule = new Map()
+  let refusals = 0
+  let symlinks = 0
+
+  const rootStat = lstatOrNull(dir)
+  if (rootStat === null || (!rootStat.isDirectory() && !rootStat.isSymbolicLink())) {
+    warnStep(`prune ${label}: ${dir} is missing; nothing to prune`)
+    const empty = { bytes: 0, files: 0 }
+    return { label, removed: 0, removedByRule: {}, refusals: 0, before: empty, after: empty, symlinks: 0 }
+  }
+  if (rootStat.isSymbolicLink()) {
+    const size = directorySize(dir)
+    warnStep(`prune ${label}: ${dir} is a symlink/junction; leaving it alone`)
+    return { label, removed: 0, removedByRule: {}, refusals: 0, before: size, after: size, symlinks: 1 }
+  }
+
+  const before = directorySize(dir)
+
+  /** Report and skip a symlink; used for the paths package-level rules look at by name. */
+  const isRealDirectory = (target) => {
+    const stat = lstatOrNull(target)
+    if (stat === null) return false
+    if (stat.isSymbolicLink()) {
+      symlinks += 1
+      warnStep(`prune ${label}: symlink/junction encountered, leaving it alone: ${target}`)
+      return false
+    }
+    return stat.isDirectory()
+  }
+
+  const remove = (target, rule) => {
+    try {
+      fs.rmSync(target, { recursive: true, force: true })
+    } catch (cause) {
+      warnStep(`prune ${label}: could not remove ${target}: ${cause.message}`)
+      return
+    }
+    removedByRule.set(rule, (removedByRule.get(rule) ?? 0) + 1)
+  }
+
+  /**
+   * Guarded removal. The owning package's manifest wins: when any entry point, `bin` target,
+   * `exports` subpath, or `files` entry resolves inside `target`, nothing is removed.
+   */
+  const removeGuarded = (packageDir, packageLabel, target, rule) => {
+    const relativeTarget = path.relative(packageDir, target).split(path.sep).join('/')
+    const reference = manifestReferenceInside(packageDir, relativeTarget)
+    if (reference !== null) {
+      refusals += 1
+      logStep(
+        `SKIP (exports-referenced): ${packageLabel} ${path.relative(dir, target)} `
+        + `(manifest reference: ${reference})`
+      )
+      return
+    }
+    remove(target, rule)
+  }
+
+  const stack = [{ dir, inheritedProtected: false }]
+  while (stack.length > 0) {
+    const current = stack.pop()
+    const currentDir = current.dir
+    const isTreeRoot = currentDir === dir
+    const currentName = path.basename(currentDir)
+    const isPrebuildsDirectory = currentName.toLowerCase() === 'prebuilds'
+    const isScopeDirectory = currentName.startsWith('@')
+    const packageName = mapsOnly ? null : packageNameAt(currentDir)
+    const isPackageRoot = packageName !== null
+    const isProtected = current.inheritedProtected || isProtectedPackage(packageName)
+
+    // `three` rule: the package resolves through its `exports` map to build output for the
+    // documented entry points, so its ES sources and demo pages are candidates — but only when
+    // the manifest does not publish them. `removeGuarded` decides that per path.
+    if (!mapsOnly && packageName === 'three') {
+      const sources = path.join(currentDir, 'src')
+      if (isRealDirectory(sources)) removeGuarded(currentDir, packageName, sources, 'three-src')
+      const examples = path.join(currentDir, 'examples')
+      if (isRealDirectory(examples)) {
+        for (const entry of fs.readdirSync(examples, { withFileTypes: true })) {
+          if (entry.name === 'jsm') continue
+          const candidate = path.join(examples, entry.name)
+          if (entry.isSymbolicLink()) {
+            symlinks += 1
+            warnStep(`prune ${label}: symlink/junction encountered, leaving it alone: ${candidate}`)
+            continue
+          }
+          removeGuarded(currentDir, packageName, candidate, 'three-examples')
+        }
+      }
+    }
+
+    // TypeScript-source rule: a package that ships built output plus TypeScript-only sources can
+    // lose the sources, unless the manifest publishes them.
+    if (!mapsOnly && isPackageRoot && !isProtected) {
+      const hasBuiltOutput = BUILT_OUTPUT_DIRECTORY_NAMES
+        .some(name => isRealDirectory(path.join(currentDir, name)))
+      const sources = path.join(currentDir, 'src')
+      if (hasBuiltOutput && isRealDirectory(sources) && isTypeScriptOnlyTree(sources)) {
+        removeGuarded(currentDir, packageName, sources, 'typescript-src')
+      }
+    }
+
+    let entries
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true })
+    } catch (cause) {
+      warnStep(`prune ${label}: cannot read ${currentDir}: ${cause.message}`)
+      continue
+    }
+
+    for (const entry of entries) {
+      const full = path.join(currentDir, entry.name)
+      if (entry.isSymbolicLink()) {
+        symlinks += 1
+        warnStep(`prune ${label}: symlink/junction encountered, leaving it alone: ${full}`)
+        continue
+      }
+
+      if (entry.isDirectory()) {
+        // `prebuilds/<platform>` payloads for other platforms.
+        if (!mapsOnly && isPrebuildsDirectory && entry.name.toLowerCase() !== NATIVE_PLATFORM_DIRECTORY) {
+          remove(full, 'foreign-platform-prebuilds')
+          continue
+        }
+        // `@scope/<pkg>-<platform>` native packages for other platforms.
+        if (!mapsOnly && isScopeDirectory && !isProtected && hasForeignPlatformSuffix(entry.name)
+          && !isProtectedPackage(`${currentName}/${entry.name}`)) {
+          remove(full, 'foreign-platform-package')
+          continue
+        }
+        // Package-local test directories, never one at the top of the tree.
+        if (!mapsOnly && isPackageRoot && !isTreeRoot && TEST_DIRECTORY_NAMES.has(entry.name)) {
+          removeGuarded(currentDir, packageName, full, 'test-directory')
+          continue
+        }
+        stack.push({ dir: full, inheritedProtected: isProtected })
+        continue
+      }
+
+      if (!entry.isFile()) continue
+      const lower = entry.name.toLowerCase()
+
+      // JavaScript source maps and Windows debug symbols.
+      if (lower.endsWith('.map')) {
+        remove(full, 'source-map')
+        continue
+      }
+      if (lower.endsWith('.pdb')) {
+        remove(full, 'debug-symbols')
+        continue
+      }
+
+      // Bulky documentation at a package root; never a legal file.
+      if (!mapsOnly && isPackageRoot && !isProtected
+        && DOCUMENTATION_EXTENSIONS.has(path.extname(lower)) && !LEGAL_FILE_NAME.test(entry.name)) {
+        const stat = lstatOrNull(full)
+        if (stat !== null && stat.size > largeDocBytes) {
+          removeGuarded(currentDir, packageName, full, 'documentation-file')
+        }
+      }
+    }
+  }
+
+  const after = directorySize(dir)
+  const removed = [...removedByRule.values()].reduce((total, count) => total + count, 0)
+  logStep(
+    `prune ${label}: ${removed} entries removed, `
+    + `${(before.bytes / MEBIBYTE).toFixed(1)} MB -> ${(after.bytes / MEBIBYTE).toFixed(1)} MB `
+    + `(${before.files} -> ${after.files} files)`
+    + `${refusals === 0 ? '' : `, ${refusals} refused by the package manifest guard`}`
+  )
+  for (const [rule, count] of [...removedByRule].sort((a, b) => b[1] - a[1])) {
+    logStep(`prune ${label}:   ${rule}: ${count}`)
+  }
+  if (symlinks > 0) warnStep(`prune ${label}: ${symlinks} symlink(s)/junction(s) left untouched`)
+  return {
+    label,
+    removed,
+    removedByRule: Object.fromEntries(removedByRule),
+    refusals,
+    before,
+    after,
+    symlinks
+  }
+}
+
 /** Path to the bundled Node.js interpreter once `node` has been staged. */
 function bundledNode() {
   return path.join(DSH_RUNTIME, 'node', 'node.exe')
@@ -407,6 +810,35 @@ function stepDeploy() {
   reportSize('deploy', deployDir)
 }
 
+/**
+ * Prune the freshly installed runtime trees.
+ *
+ * Only the installed dependency trees (`artifact`, `ppt`, `deploy`) are pruned: `cli` and
+ * `plugins` carry build inputs, `skills` carries Markdown the product renders, and `seed` is
+ * pruned by `build-profile-seed.mjs` while it stages its plugin trees.
+ *
+ * `deploy` runs in maps-only mode. The three bundled CLIs must keep 100% of their
+ * functionality, so nothing but source maps and debug symbols may leave that tree.
+ */
+function stepPrune() {
+  const targets = [
+    { label: 'artifact', dir: path.join(TEACHER_RUNTIME, 'artifact') },
+    { label: 'ppt', dir: path.join(TEACHER_RUNTIME, 'ppt') },
+    { label: 'deploy', dir: path.join(TEACHER_RUNTIME, 'deploy'), mapsOnly: true }
+  ]
+  let removed = 0
+  let refusals = 0
+  for (const target of targets) {
+    const stats = pruneRuntimeTree(target.dir, {
+      label: target.label,
+      mapsOnly: target.mapsOnly === true
+    })
+    removed += stats.removed
+    refusals += stats.refusals
+  }
+  log(`prune: ${removed} entries removed across ${targets.length} trees (${refusals} manifest refusals)`)
+}
+
 function stepSkills() {
   const skillsRoot = path.join(TEACHER_RUNTIME, 'skills')
   emptyDir(skillsRoot)
@@ -520,11 +952,30 @@ const STEPS = [
   ['artifact', stepArtifact],
   ['ppt', stepPpt],
   ['deploy', stepDeploy],
+  ['prune', stepPrune],
   ['skills', stepSkills],
   ['plugins', stepPlugins],
   ['manifests', stepManifests],
   ['bin', stepBin]
 ]
+
+/**
+ * True when this module is the process entry point. `build-profile-seed.mjs` imports
+ * `pruneRuntimeTree` from here, and that import must not start a runtime build.
+ */
+function isMainModule() {
+  const entry = process.argv[1]
+  if (entry === undefined) return false
+  const normalize = (value) => {
+    const resolved = path.resolve(value)
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved
+  }
+  try {
+    return normalize(entry) === normalize(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
 
 function main() {
   ensureDir(RESOURCES)
@@ -542,4 +993,6 @@ function main() {
   reportSize('teacher-runtime total', TEACHER_RUNTIME)
 }
 
-main()
+export { pruneRuntimeTree }
+
+if (isMainModule()) main()

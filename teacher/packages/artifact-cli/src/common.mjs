@@ -63,11 +63,19 @@ export function resolveSharedNodeModules() {
 }
 
 /** Bundled Vite entry point, or null when the shared tree is unavailable. */
-export function resolveViteEntry() {
+export function resolveViteEntry(projectDir) {
   const shared = resolveSharedNodeModules();
-  if (!shared) return null;
-  const entry = path.join(shared, 'vite', 'bin', 'vite.js');
-  return fs.existsSync(entry) ? entry : null;
+  if (shared) {
+    const entry = path.join(shared, 'vite', 'bin', 'vite.js');
+    if (fs.existsSync(entry)) return entry;
+  }
+  // A development checkout, or a project that installed its own dependencies, has no bundled
+  // tree; fall back to the project-local Vite so the CLI still works there.
+  if (projectDir) {
+    const local = path.join(projectDir, 'node_modules', 'vite', 'bin', 'vite.js');
+    if (fs.existsSync(local)) return local;
+  }
+  return null;
 }
 
 export function listTemplates() {
@@ -128,11 +136,13 @@ export function run(cmd, args, options = {}) {
   return result.status ?? 1;
 }
 
-/** Run the bundled Vite through the bundled Node.js. */
+/** Run Vite through the bundled Node.js, or the project's own copy in a dev checkout. */
 export function runVite(viteArgs, options = {}) {
-  const entry = resolveViteEntry();
+  const entry = resolveViteEntry(options.cwd);
   if (!entry) {
-    throw new Error('Bundled Vite was not found. Reinstall Teacher DSH or run teacher-artifact install.');
+    throw new Error(
+      'Vite was not found. Reinstall Teacher DSH, or run teacher-artifact install to add it to this project.'
+    );
   }
   return run(process.execPath, [entry, ...viteArgs], options);
 }

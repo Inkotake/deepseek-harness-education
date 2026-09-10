@@ -1,0 +1,18 @@
+{
+    "name":  "teacher-dsh",
+    "version":  "0.1.0",
+    "private":  true,
+    "description":  "Teacher DSH 0.1 - DeepSeek Harness Desktop distribution for teachers",
+    "packageManager":  "pnpm@11.17.0",
+    "engines":  {
+                    "node":  "\u003e=24.0.0",
+                    "pnpm":  "\u003e=11.0.0"
+                },
+    "scripts":  {
+                    "install:toolchain":  "pnpm install --filter @teacher-dsh/artifact-cli --filter @teacher-dsh/artifact-sdk --filter @teacher-dsh/ppt-kit",
+                    "build":  "node scripts/build-bundle.mjs \u0026\u0026 node scripts/build-toolchain.mjs",
+                    "pack:sdk":  "node scripts/build-toolchain.mjs",
+                    "test":  "node tests/smoke/run-all.mjs",
+                    "verify":  "node scripts/verify-skills.mjs \u0026\u0026 node scripts/verify-artifacts.mjs \u0026\u0026 node scripts/verify-licenses.mjs"
+                }
+}

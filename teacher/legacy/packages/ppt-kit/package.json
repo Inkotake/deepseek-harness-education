@@ -1,0 +1,17 @@
+{
+  "name": "@teacher-dsh/ppt-kit",
+  "version": "0.1.0",
+  "description": "Teacher DSH PPT Kit - teaching deck wrapper over PptxGenJS",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "pptxgenjs": "4.0.1"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "description": "Blank teaching artifact with Teacher DSH toolbar",
+  "useSdk": true,
+  "dependencies": {},
+  "devDependencies": { "vite": "8.2.2" }
+}

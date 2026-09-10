@@ -1,0 +1,31 @@
+{
+  "name": "Teacher DSH 0.1 version lock",
+  "released": false,
+  "platform": "windows-x64",
+  "runtime": {
+    "node": "24.14.0",
+    "pnpm": "11.17.0"
+  },
+  "dsh": {
+    "repo": "https://github.com/deepseek-ai/deepseek-harness",
+    "ref": "pin-required",
+    "note": "由 scripts/sync-upstream.mjs 拉取并记录精确 commit/hash"
+  },
+  "packages": {
+    "@teacher-dsh/artifact-sdk": "0.1.0",
+    "@teacher-dsh/artifact-cli": "0.1.0",
+    "@teacher-dsh/ppt-kit": "0.1.0",
+    "@teacher-dsh/deploy-toolchain": "0.1.0",
+    "vite": "8.2.2",
+    "three": "0.186.0",
+    "katex": "0.18.7",
+    "jsxgraph": "1.13.3",
+    "echarts": "6.1.0",
+    "mermaid": "12.0.0",
+    "matter-js": "0.20.0",
+    "pptxgenjs": "4.0.1",
+    "netlify-cli": "27.5.2",
+    "wrangler": "4.130.0",
+    "vercel": "59.15.1"
+  }
+}

@@ -1,0 +1,21 @@
+{
+    "name":  "@teacher-dsh/artifact-cli",
+    "version":  "0.1.0",
+    "description":  "teacher-artifact CLI - init/build/preview/check/pack teaching artifacts",
+    "type":  "module",
+    "bin":  {
+                "teacher-artifact":  "./bin/teacher-artifact.mjs",
+                "teacher-latex":  "./bin/teacher-latex.mjs"
+            },
+    "files":  [
+                  "bin",
+                  "src",
+                  "vendor",
+                  "templates"
+              ],
+    "license":  "MIT",
+    "dependencies":  {
+                         "vite":  "8.2.2",
+                         "@teacher-dsh/artifact-sdk":  "workspace:*"
+                     }
+}

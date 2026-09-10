@@ -1,0 +1,6 @@
+{
+  "description": "Three.js 3D teaching artifact with OrbitControls, lighting, resize, animation loop, and a sample solar system",
+  "useSdk": true,
+  "dependencies": { "three": "0.186.0" },
+  "devDependencies": { "vite": "8.2.2" }
+}

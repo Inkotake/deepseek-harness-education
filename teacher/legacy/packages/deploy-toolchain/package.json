@@ -1,0 +1,20 @@
+{
+  "name": "@teacher-dsh/deploy-toolchain",
+  "version": "0.1.0",
+  "description": "Bundled deployment CLIs for Teacher DSH (Netlify, Cloudflare Wrangler, Vercel)",
+  "type": "module",
+  "bin": {
+    "teacher-netlify": "./bin/netlify.mjs",
+    "teacher-wrangler": "./bin/wrangler.mjs",
+    "teacher-vercel": "./bin/vercel.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "netlify-cli": "27.5.2",
+    "wrangler": "4.130.0",
+    "vercel": "59.15.1"
+  }
+}

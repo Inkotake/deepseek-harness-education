@@ -1,0 +1,18 @@
+{
+  "name": "@teacher-dsh/teacher-bundle",
+  "version": "0.1.0",
+  "description": "Teacher DSH bundle - thin layer that wires toolchain, templates, and bundled teacher skills into DSH",
+  "private": true,
+  "license": "MIT",
+  "dsh": {
+    "permission": {
+      "preset": "workspace-write"
+    },
+    "toolchain": {
+      "node": "24.14.0",
+      "pnpm": "11.17.0",
+      "cli": "teacher-artifact"
+    },
+    "bundledSkills": "./resources/teacher-skills"
+  }
+}

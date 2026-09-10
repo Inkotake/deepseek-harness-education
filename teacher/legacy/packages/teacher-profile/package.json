@@ -1,0 +1,16 @@
+{
+  "name": "teacher-dsh-profile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Teacher DSH 0.1 profile definition",
+  "license": "MIT",
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "@teacher-dsh/teacher-bundle"
+      ]
+    }
+  }
+}

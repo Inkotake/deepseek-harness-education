@@ -1,0 +1,14 @@
+{
+  "name": "@teacher-dsh/publish-cli",
+  "version": "0.1.0",
+  "description": "Teacher DSH static publishing CLI backed by the reviewed provider registry",
+  "type": "module",
+  "bin": {
+    "teacher-publish": "./bin/teacher-publish.mjs"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "license": "MIT"
+}

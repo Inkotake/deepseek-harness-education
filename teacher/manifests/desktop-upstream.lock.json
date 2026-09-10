@@ -1,0 +1,15 @@
+{
+  "name": "desktop-upstream.lock",
+  "version": "0.1.0",
+  "desktop": {
+    "repo": "https://github.com/anywhere-labs/dsh-desktop",
+    "tag": null,
+    "commit": "c8009902451f13b56ee06a4658e88a4aca550f7b"
+  },
+  "harness": {
+    "repo": "https://github.com/deepseek-ai/deepseek-harness",
+    "pinned_by_desktop": true,
+    "version": "0.1.2-rc.1"
+  },
+  "policy": "Upgrade only through PR + tests; never follow master/latest automatically."
+}

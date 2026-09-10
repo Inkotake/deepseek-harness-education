@@ -1,0 +1,22 @@
+name: windows-package
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ['v*']
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install desktop dependencies
+        run: |
+          corepack enable
+          yarn install --immutable
+      - name: Seed teacher offline store
+        run: node scripts/teacher/build-offline-store.mjs
+      - name: Package Windows
+        run: yarn workspace dsh-plugin-desktop package:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teacher-dsh-windows-x64
+          path: dsh-plugin-desktop/dist/*.exe

@@ -1,0 +1,6 @@
+{
+  "description": "Classroom interaction game template built with the Artifact SDK UI kit",
+  "useSdk": true,
+  "dependencies": {},
+  "devDependencies": { "vite": "8.2.2" }
+}

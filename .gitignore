@@ -14,3 +14,8 @@ dsh-plugin-desktop/lib/
 dsh-community-market/lib/
 
 .env.yarn
+# Teacher DSH layer
+teacher/**/node_modules/
+teacher/**/dist/
+teacher/**/*.tgz
+teacher/legacy/node_modules/

@@ -1,0 +1,9 @@
+{
+  "id": "pptkit-presentation",
+  "repo": "https://github.com/openHacking/pptkit-presentation.git",
+  "license": "MIT",
+  "commit": "004a29fb702dbdd98bcdbf8b7ecce9617cd33775",
+  "copied": [
+    "skills/pptkit-presentation"
+  ]
+}

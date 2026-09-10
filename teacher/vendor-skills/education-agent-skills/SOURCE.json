@@ -1,0 +1,15 @@
+{
+  "id": "education-agent-skills",
+  "repo": "https://github.com/GarethManning/education-agent-skills.git",
+  "license": "CC BY-SA 4.0",
+  "commit": "6bbbce418f82e11044009c9f3b7373a354de5bd0",
+  "copied": [
+    "skills/curriculum-assessment/backwards-design-unit-planner",
+    "skills/explicit-instruction/explicit-instruction-sequence-builder",
+    "skills/explicit-instruction/checking-for-understanding-protocol-designer",
+    "skills/questioning-discussion/hinge-question-designer",
+    "skills/memory-learning-science/retrieval-practice-generator",
+    "skills/curriculum-assessment/criterion-referenced-rubric-generator",
+    "skills/inclusive-design/udl-lesson-auditor"
+  ]
+}

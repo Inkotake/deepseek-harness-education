@@ -1,0 +1,19 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify manifests
+        run: node scripts/teacher/verify-distribution.mjs
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: 'Teacher DSH ${{ github.ref_name }}'
+          body: 'Teacher DSH release. See THIRD_PARTY_NOTICES.md for licenses.'

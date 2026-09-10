@@ -1,0 +1,12 @@
+{
+  "name": "teacher-dsh-layer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Teacher DSH 0.1.0 teacher layer (standalone pnpm workspace)",
+  "packageManager": "pnpm@11.17.0",
+  "scripts": {
+    "install:toolchain": "pnpm install --filter @teacher-dsh/artifact-cli --filter @teacher-dsh/artifact-sdk",
+    "build": "node ../scripts/build-toolchain.mjs",
+    "test": "node ../tests/smoke/run-all.mjs"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "teacher-plugins.lock",
+  "version": "0.1.0",
+  "core": [
+    {
+      "id": "dsh-better-sidebar",
+      "repo": "https://github.com/omdsh-dev/DSH-better-sidebar",
+      "license": "MIT",
+      "compatibility": "DSH 0.1.2-rc.1+",
+      "install": "local-tgz",
+      "note": "node-pty build scripts must be pre-approved during seed build"
+    },
+    {
+      "id": "dsh-cowork",
+      "repo": "https://github.com/Jesse-njx/dsh-cowork",
+      "license": "MIT",
+      "compatibility": "DSH 0.1.2-rc.1+",
+      "install": "local-tgz"
+    },
+    {
+      "id": "pptkit-presentation",
+      "repo": "https://github.com/openHacking/pptkit-presentation",
+      "license": "MIT",
+      "compatibility": "DSH 0.1.2-rc.1+",
+      "install": "local-tgz"
+    }
+  ],
+  "optional": [
+    {
+      "id": "dsh-open-file",
+      "repo": "https://github.com/hyper-dsh-plugins/dsh-open-file",
+      "license": "MIT",
+      "enabled": false,
+      "reason": "bundles OCR; deferred to 0.1.1"
+    },
+    {
+      "id": "dsh-knowledge-base",
+      "repo": "https://github.com/htcqp802/dsh-knowledge-base",
+      "license": "MIT",
+      "enabled": false,
+      "reason": "not required for artifact-generation MVP"
+    }
+  ],
+  "excluded": [
+    "dsh-at-file",
+    "dsh-auto-mode",
+    "dsh-undo"
+  ]
+}

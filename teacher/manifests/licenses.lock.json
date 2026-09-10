@@ -1,0 +1,15 @@
+{
+  "name": "teacher-licenses.lock",
+  "version": "0.1.0",
+  "entries": [
+    { "component": "DeepSeek Harness", "license": "MIT", "source": "deepseek-ai/deepseek-harness" },
+    { "component": "anywhere-labs DSH Desktop", "license": "MIT", "source": "anywhere-labs/dsh-desktop" },
+    { "component": "Three.js", "license": "MIT", "source": "mrdoob/three.js" },
+    { "component": "Vercel Agent Skills", "license": "MIT", "source": "vercel-labs/agent-skills" },
+    { "component": "PPTKit Presentation", "license": "MIT", "source": "openHacking/pptkit-presentation" },
+    { "component": "DSH Cowork", "license": "MIT", "source": "Jesse-njx/dsh-cowork" },
+    { "component": "DSH Better Sidebar", "license": "MIT", "source": "omdsh-dev/DSH-better-sidebar" },
+    { "component": "Education Agent Skills", "license": "CC BY-SA 4.0", "source": "GarethManning/education-agent-skills", "note": "vendored unmodified; BY-SA applies" }
+  ],
+  "requires": "THIRD_PARTY_NOTICES.md at repository root"
+}

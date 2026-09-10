@@ -1,0 +1,23 @@
+{
+  "name": "teacher-toolchain.lock",
+  "version": "0.1.0",
+  "compatibility": {
+    "desktop": "anywhere-labs/dsh-desktop v2.0.5",
+    "harness": "deepseek-ai/deepseek-harness 0.1.2-rc.1"
+  },
+  "runtime": {
+    "node": "managed-by-desktop",
+    "pnpm": "managed-by-desktop"
+  },
+  "packages": {
+    "vite": "8.2.2",
+    "three": "0.186.0",
+    "katex": "0.18.7",
+    "jsxgraph": "1.13.3",
+    "echarts": "6.1.0",
+    "mermaid": "12.0.0",
+    "matter-js": "0.20.0",
+    "@teacher-dsh/artifact-sdk": "0.1.0",
+    "@teacher-dsh/artifact-cli": "0.1.0"
+  }
+}

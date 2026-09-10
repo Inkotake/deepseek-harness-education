@@ -1,0 +1,79 @@
+{
+  "name": "teacher-skills.lock",
+  "version": "0.1.0",
+  "own": [
+    {
+      "id": "teaching-aid",
+      "owner": "teacher-dsh",
+      "license": "MIT",
+      "role": "artifact orchestration router"
+    },
+    {
+      "id": "publish-static",
+      "owner": "teacher-dsh",
+      "license": "MIT",
+      "role": "provider-adapter static publishing"
+    },
+    {
+      "id": "latex-authoring",
+      "owner": "teacher-dsh",
+      "license": "MIT",
+      "role": "KaTeX + .tex tool-use contract"
+    }
+  ],
+  "vendored": [
+    {
+      "id": "backwards-design-unit-planner",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/curriculum-assessment/backwards-design-unit-planner",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "explicit-instruction-sequence-builder",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/explicit-instruction/explicit-instruction-sequence-builder",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "checking-for-understanding-protocol-designer",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/explicit-instruction/checking-for-understanding-protocol-designer",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "hinge-question-designer",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/questioning-discussion/hinge-question-designer",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "retrieval-practice-generator",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/memory-learning-science/retrieval-practice-generator",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "criterion-referenced-rubric-generator",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/curriculum-assessment/criterion-referenced-rubric-generator",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "udl-lesson-auditor",
+      "source": "https://github.com/GarethManning/education-agent-skills/tree/main/skills/inclusive-design/udl-lesson-auditor",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Gareth Manning Education Agent Skills"
+    },
+    {
+      "id": "pptkit-presentation",
+      "source": "https://github.com/openHacking/pptkit-presentation",
+      "license": "MIT"
+    },
+    {
+      "id": "web-design-guidelines",
+      "source": "https://github.com/vercel-labs/agent-skills",
+      "license": "MIT",
+      "note": "pin commit, never runtime-fetch main"
+    }
+  ]
+}

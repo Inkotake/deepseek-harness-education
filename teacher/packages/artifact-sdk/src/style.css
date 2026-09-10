@@ -1,0 +1,30 @@
+/* Teacher DSH Artifact SDK base styles */
+:root {
+  --tdsh-font: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+  --tdsh-min-button: 40px;
+  --tdsh-min-font: 18px;
+  --tdsh-primary: #2563eb;
+  --tdsh-bg: #0f172a;
+  --tdsh-surface: #ffffff;
+  --tdsh-text: #0f172a;
+  --tdsh-text-light: #f8fafc;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--tdsh-font);
+  font-size: var(--tdsh-min-font);
+}
+
+button {
+  font-family: var(--tdsh-font);
+  min-height: var(--tdsh-min-button);
+  min-width: var(--tdsh-min-button);
+  font-size: var(--tdsh-min-font);
+  touch-action: manipulation;
+}
+
+.tdsh-panel h2 {
+  margin: 0 0 8px 0;
+}

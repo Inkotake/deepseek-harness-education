@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/request-access",
+      "destination": "/api/request-access"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server",
+      "destination": "/api/well-known/oauth-authorization-server"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp",
+      "destination": "/api/well-known/oauth-protected-resource/mcp"
+    }
+  ]
+}

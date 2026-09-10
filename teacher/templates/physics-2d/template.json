@@ -1,0 +1,6 @@
+{
+  "description": "Matter.js 2D physics teaching artifact (free fall and bounce)",
+  "useSdk": true,
+  "dependencies": { "matter-js": "0.20.0" },
+  "devDependencies": { "vite": "8.2.2" }
+}

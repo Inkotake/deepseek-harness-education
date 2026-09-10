@@ -1,0 +1,21 @@
+{
+  "name": "teacher",
+  "default": true,
+  "bundles": [
+    "@deepseek-ai/dsh-base",
+    "@deepseek-ai/dsh-web-app",
+    "@teacher-dsh/teacher-bundle"
+  ],
+  "plugins": [
+    "dsh-better-sidebar",
+    "dsh-cowork",
+    "pptkit-presentation"
+  ],
+  "bundledSkills": [
+    "teacher/packages/teacher-bundle/resources/teacher-skills",
+    "teacher/vendor-skills/education-agent-skills",
+    "teacher/vendor-skills/pptkit-presentation/skills/pptkit-presentation",
+    "teacher/vendor-skills/vercel-web-design/skills/web-design-guidelines"
+  ],
+  "permissionPreset": "workspace-write"
+}

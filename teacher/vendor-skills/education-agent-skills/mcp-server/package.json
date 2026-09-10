@@ -1,0 +1,35 @@
+{
+  "name": "education-agent-skills-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing the Education Agent Skills Library as callable tools",
+  "license": "CC-BY-SA-4.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "education-agent-skills": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src/skills.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "vercel-build": "npm run build",
+    "postbuild": "cp src/skills.json dist/skills.json",
+    "bundle-skills": "tsx scripts/bundle-skills.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "gray-matter": "^4.0.3",
+    "zod": "^3.25.76"
+  }
+}

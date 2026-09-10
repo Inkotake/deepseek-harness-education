@@ -4,6 +4,9 @@ import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+/** Product name shared by every Windows artifact this distribution produces. */
+const PRODUCT_NAME = 'Teacher DSH'
+
 /** Verify a complete in-memory Windows PE image. */
 export function assertPortableExecutableBuffer(data: Buffer, label: string, source: string): void {
   if (data.byteLength < 68 || data.subarray(0, 2).toString('ascii') !== 'MZ') {
@@ -90,9 +93,9 @@ export function verifyWindowsInstaller(
   const distDir = join(options.desktopRoot, 'dist')
   const installerPath = join(
     distDir,
-    `DSH-Desktop-${options.version}-x64-Setup.exe`,
+    `${PRODUCT_NAME.replaceAll(' ', '-')}-${options.version}-x64-Setup.exe`,
   )
-  const applicationPath = join(distDir, 'win-unpacked', 'DSH Desktop.exe')
+  const applicationPath = join(distDir, 'win-unpacked', `${PRODUCT_NAME}.exe`)
 
   assertPortableExecutable(installerPath, 'Windows NSIS installer')
   assertPortableExecutable(applicationPath, 'unpacked Windows application')

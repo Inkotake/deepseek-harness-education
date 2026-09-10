@@ -126,7 +126,8 @@ describe('desktop update Host plugin', () => {
   it('exposes the packaged 60-second and six-hour background policy', () => {
     expect(inject).toEqual(['desktopRuntime', 'webServer'])
     expect(Config({} as UpdateConfig)).toEqual({
-      enabled: true,
+      // Teacher DSH 0.1 ships with automatic OTA disabled by default.
+      enabled: false,
       initialDelayMs: 60_000,
       intervalMs: 21_600_000,
       requestTimeoutMs: 15_000,

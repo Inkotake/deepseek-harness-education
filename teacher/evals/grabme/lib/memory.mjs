@@ -103,7 +103,7 @@ export function deriveTaskType(teacherMessage) {
   const text = normalizeText(teacherMessage ?? '')
   if (/(课件|ppt|幻灯|幻灯片)/u.test(text)) return 'ppt_design'
   if (/(试卷|月考|期中|期末|测验|小测|练习|题目|卷子|考试)/u.test(text)) return 'assessment_design'
-  if (/(教案|一节课|上课|教学|讲授|复习课|单元|课堂|讲)/u.test(text)) return 'lesson_design'
+  if (/(教案|一节课|一节|设计|上课|教学|讲授|复习|单元|课堂|讲)/u.test(text)) return 'lesson_design'
   return 'general'
 }
 
@@ -122,26 +122,13 @@ export function recordsFromPreloadedMemory(preloaded) {
   if (preloaded === null || typeof preloaded !== 'object') return records
   for (const [namespace, fields] of Object.entries(preloaded)) {
     if (fields === null || typeof fields !== 'object') continue
+    if (Array.isArray(fields)) {
+      records.push(...recordsFromList(namespace, namespace, fields))
+      continue
+    }
     for (const [key, value] of Object.entries(fields)) {
       if (Array.isArray(value)) {
-        for (let index = 0; index < value.length; index += 1) {
-          const element = value[index]
-          if (element === null || typeof element !== 'object') continue
-          const scoped = typeof element.scope === 'string' ? element.scope : `${key}[${index}]`
-          records.push({
-            id: `preloaded:${namespace}.${scoped}`,
-            namespace,
-            key: scoped,
-            value: String(element.text ?? element.value ?? ''),
-            source: element.source === undefined ? undefined : { source: String(element.source) },
-            confidence: element.confidence === undefined ? undefined : String(element.confidence),
-            expires_at: element.expires_at ?? null,
-            updated_at: element.updated_at,
-            origin: 'preloaded_memory',
-            injectionSeq: 0,
-            injectionTurn: 0,
-          })
-        }
+        records.push(...recordsFromList(namespace, key, value))
         continue
       }
       if (value !== null && typeof value === 'object') {
@@ -152,6 +139,37 @@ export function recordsFromPreloadedMemory(preloaded) {
       }
       records.push(makePreloadedRecord(namespace, key, value))
     }
+  }
+  return records
+}
+
+/**
+ * Expand one list-valued namespace field into records.
+ *
+ * A list holds structured entries (the `corrections` array is the only one in
+ * `cases.json`), so each element becomes exactly one record whose `key` is the
+ * element's own `scope` when it has one. Expanding the element's scalar fields
+ * instead would fabricate several unrelated memory entries out of one correction.
+ */
+function recordsFromList(namespace, field, list) {
+  const records = []
+  for (let index = 0; index < list.length; index += 1) {
+    const element = list[index]
+    if (element === null || typeof element !== 'object') continue
+    const scoped = typeof element.scope === 'string' ? element.scope : `${field}[${index}]`
+    records.push({
+      id: `preloaded:${namespace}.${scoped}`,
+      namespace,
+      key: scoped,
+      value: String(element.text ?? element.value ?? ''),
+      source: element.source === undefined ? undefined : { source: String(element.source) },
+      confidence: element.confidence === undefined ? undefined : String(element.confidence),
+      expires_at: element.expires_at ?? null,
+      updated_at: element.updated_at,
+      origin: 'preloaded_memory',
+      injectionSeq: 0,
+      injectionTurn: 0,
+    })
   }
   return records
 }

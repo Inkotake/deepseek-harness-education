@@ -1,0 +1,9 @@
+{"type":"session","version":3,"id":"direct-execution-immediate","createdAt":1767225600000,"cwd":"C:\\grabme-fixtures","isSeeded":false,"delegationDepth":0}
+{"type":"turn/start","data":{"turn":1},"seq":0,"time":1767225600001}
+{"type":"user/message","data":{"id":"u1","role":"user","source":{"kind":"user"},"content":[{"type":"text","text":"直接做，别问了"}]},"surfaceOp":"append","seq":1,"time":1767225600002}
+{"type":"step/start","data":{"turn":1,"step":1},"seq":2,"time":1767225600003}
+{"type":"assistant/message","data":{"turn":1,"step":1,"message":{"id":"a1","role":"assistant","source":{"kind":"model","provider":"fixture","model":"authorship-only"},"content":[{"type":"text","text":"按高二、人教版直接出稿，假设课时 45 分钟。"},{"type":"tool-call","id":"call-write-1","name":"write","arguments":"{\"file_path\":\"热力环流-教案.md\",\"content\":\"# 热力环流（高二）\\n\\n一、教学目标（2 项）\"}"}]},"stream":[]},"surfaceOp":"append","seq":3,"time":1767225600004}
+{"type":"tool/call","data":{"turn":1,"step":1,"callId":"call-write-1","name":"write","arguments":"{\"file_path\":\"热力环流-教案.md\",\"content\":\"# 热力环流（高二）\\n\\n一、教学目标（2 项）\"}"},"seq":4,"time":1767225600005}
+{"type":"tool/result","data":{"turn":1,"step":1,"message":{"id":"result-call-write-1","role":"user","source":{"kind":"tool","callId":"call-write-1"},"content":[{"type":"text","text":"Wrote 热力环流-教案.md (3 lines)."}]}},"surfaceOp":"append","seq":5,"time":1767225600006}
+{"type":"step/end","data":{"turn":1,"step":1},"seq":6,"time":1767225600007}
+{"type":"turn/end","data":{"turn":1,"reason":{"kind":"completed"}},"seq":7,"time":1767225600008}

@@ -62,33 +62,91 @@ DSH 会话里跑一遍完整对话。多数 case 带真实记忆（年级、教�
 所以跑批默认是**一次跑完 26 条**（可重复多轮），并在报告里同时给出
 “整套一起跑”和“逐条隔离跑”两组数字。两者不一致时，先修套件与记忆 scope，不要挑好看的报。
 
-## Runner 还没有实现
+## Runner：怎么跑
 
-**说清楚：本仓库里目前没有这个套件的 runner，`cases.json` 也还没有被任何脚本消费。**
-`teacher/evals/grabme/` 现在只有用例、指标定义和本文件。
+Runner 已经实现，落在 `teacher/evals/grabme/`（`run.mjs` / `score.mjs` / `lib/` / `tests/`）。
+**它评的是已经录下来的会话：不自己起 session，也不调用模型。** 一次跑批要先把 case 各跑成
+一份真实会话（这一步的驱动程序仍未实现，见文末），再把 runner 指向那些会话。
 
-要真正跑起来，runner 至少要具备：
+```sh
+# 一次跑完一个跑批目录（目录树里每个 session 目录取代号最高的世代）
+node teacher/evals/grabme/run.mjs <跑批根目录>
 
-1. **会话驱动**：按 case 起一个真实 DSH session（`education` profile），先注入
-   `preloaded_memory`，再把 `teacher_message` 作为首条用户消息送进去；遇到
-   `ask_user_question` 时按该 case 的剧本扮演老师回答（`do-not-know-you-choose`
-   这类用例的答案是固定的，`correction_followup` 类需要能注入第二轮纠正）。
-2. **日志读取**：按 session 读 append-only JSONL 事件流，能处理默认的
-   `.jsonl.zstd` 压缩世代与版本迁移（复用
-   `deepseek-harness/packages/session/session-persistence-jsonl/`，不要自己解析裸文件）。
-3. **指标实现**：把 `metrics.md` 的八个公式实现为对事件流的纯函数，包括
-   `ask_user_question` 按 `questions` 数组长度计数、TTL 豁免的三条判据、
-   以及 `changed(x)` 的“回答后产物是否真的变了”判定。
-4. **槽位归一化表**：维护槽位名（年级、教材版本、教学侧重、考试范围……）与问题文本的
-   同义匹配表，用于 `must_ask_about` / `must_not_ask_about` 判定；
-   匹配不到的问题记 `unclassified` 并报出，不得静默丢弃。
-5. **两种模式的报告**：整套连续跑 + 逐条隔离跑，输出每 case 断言结果、八个总体指标、
-   以及两个方向的失败清单。
-6. **成本与稳定性控制**：真实会话 API 调用有费用且不确定，需要可配置的重复轮数与
-   并发度，并把原始 session 归档，使指标可复算。
+# 单条会话：session id 或所在目录名与 cases.json 的 id 相同即自动对上
+node teacher/evals/grabme/run.mjs path/to/sessions/missing-midterm-paper-two-questions
 
-Runner 落地时按仓库既有风格放在 `teacher/scripts/` 下（与 `verify-*.mjs`、
-`build-*.mjs` 同类），与 `cases.json` 同源引用，不要在 `deepseek-harness/` 内改动任何东西。
+# 机器可读报告 / 在 PowerShell 里可以直接复制的文本报告
+node teacher/evals/grabme/run.mjs <路径> --json
+node teacher/evals/grabme/run.mjs <路径> --ascii
+
+# 用某一个 case 的 expected 逐条判定，并分别给出两个方向的失败清单
+node teacher/evals/grabme/score.mjs --case missing-midterm-paper-two-questions <路径>
+
+# 单元测试
+node --test "teacher/evals/grabme/tests/*.test.mjs"
+```
+
+**为什么要 `--ascii`**：PowerShell 控制台会把中文输出打乱，`--ascii` 把非 ASCII 字符转成
+`\uXXXX`，是唯一能直接粘出来的文本形态；`--json` 保留原字符，供程序消费。
+
+### 读什么、不读什么
+
+所有数字只从 append-only session log 的事件流里数出来（`user/message`、`turn/start`、
+`turn/end`、`assistant/message`、`tool/call`、`tool/result`、`deliverables/presented`），
+不读助手散文。事件名与载荷字段取自
+`deepseek-harness/packages/core/session/src/known-event-types.ts`；该文件在运行时被读取并
+解析，所以 runner 不会和它评的那份构建脱节（`tests/known-events.test.mjs` 断言两者一致）。
+
+- `.jsonl` 与 `.jsonl.zstd` 都读（zstd 走 Node 自带的 `zlib.zstdDecompressSync`）。
+- 只解析「逻辑行」世代（v2/v3：行类型就是事件名）。更早的世代把助手输出编成
+  `assistant/chunk` / `reasoning-chunks` 这类物理行，需要
+  `deepseek-harness/packages/session/` 下的迁移编解码器；runner 遇到即报错退出，不猜。
+- 出现 `KNOWN_SESSION_EVENT_TYPES` 之外、且没有 `ignorable` 标记的事件类型时，按 DSH 读
+  路径的规则拒读；`--tolerate-unknown-events` 可降级为「照评并在报告里列出」。
+
+### 口径与目标
+
+八个指标按 `metrics.md` 的公式实现，报告同时给出分子、分母与目标判定（Repeated Question
+Rate `< 2%`、Median clarification rounds `≤ 1`、Time to First Useful Artifact `≤ 2 轮`，
+其余四项为观察项）。每个 case 的 `expected` 断言逐条判定，`must_ask_about`（该问没问）与
+`must_not_ask_about`（不该问却问了）分开统计。
+
+### 这些地方做不到，报告里会直说，不静默跳过
+
+1. **结构化 Requirement Brief 无法从日志判定。** `KNOWN_SESSION_EVENT_TYPES` 里没有任何
+   brief 事件类型，日志无法把 brief 与普通散文区分开——而那正是「不读散文」要避免的。
+   `briefDetected` 一律为 `null` 并给出原因；`must_produce_brief` 改用
+   `deliverables/presented` 或产出型工具的 `tool/result`，也就是 `metrics.md` 同一句话里的
+   另一半判据。
+2. **TTL 豁免的三条判据全部实现**（`lib/memory.mjs` 的 `evaluateTtlExemption`），并逐条报出
+   `a`/`b`/`c` 与不合格原因：(a) 该槽位记忆条目带早于本次会话的 `expires_at` 且已过期；
+   (b) 问题文本是确认式（`还是/仍然/依然/是否` + `吗/呢`）；(c) 日志里有该条目的注入记录
+   （非 `source.kind: 'user'` 的 `user/message` 里出现条目 id 或值）。`cases.json` 的
+   `preloaded_memory` 没有任何 `expires_at` 字段，所以只有会话旁边放了 `memory.json`
+   （按 `teacher/packages/global-memory/schema.ts` 的 `MemoryRecord` 形状）时 (a) 才可能成立；
+   没有时报告写「无法判定」，而不是默认豁免成立。
+3. **记忆两项指标的判据有一处无法完全从日志得出，报告会标出来。** `rel(m)` 的任务类型来自
+   `metrics.md` 说的 brief 的 `task` 字段；brief 不存在，于是按 case 的 `teacher_message`
+   关键词映射到 `MEMORY_RETRIEVAL_RULES` 的键，并在报告里写明用了哪条规则。rule 1（与用户
+   当前明确表达冲突）只在槽位有可解析取值时才能判定（分钟/节/分/题/页/年级/教材版本），判
+   定不了的记 `undetermined`，并把该率标成下界。
+4. **`changed(x)` 是日志代理量，不是人看 diff。** 判据：回答之后有没有产出事件；有的话，
+   回答的取值 token（CJK 二元组 + ASCII 词）是否出现在其中，且该 token 在回答前不存在。
+   三条出路是 `1` / `0` / `undecidable`，`undecidable` 按 `metrics.md` §3 从分子分母同时剔除
+   并单独计数。
+5. **只有「一次跑完」一种报告模式。** README 要求的「整套连续跑 + 逐条隔离跑」两组数字还
+   没有：runner 评的是给定的会话集合，隔离与串联是录制阶段的事。
+
+### 仍然没有实现的部分
+
+**会话驱动与录制还没有。** 没有东西按 case 起真实 DSH session、注入 `preloaded_memory`、
+把 `teacher_message` 当首条用户消息送进去、并按剧本扮演老师回答 `ask_user_question`；也没有
+原始 session 归档、可配置重复轮数与并发度的成本控制。在它落地之前，`cases.json` 的 26 条
+case 仍然需要手工或另写脚本跑成会话。
+
+落点说明：本次 runner 按交付要求放在 `teacher/evals/grabme/`（与 `cases.json`、`metrics.md`
+同目录），没有放进 `teacher/scripts/`；`deepseek-harness/` 内没有任何改动，`cases.json` 也
+没有被改过。
 
 ## 配套事实：`cases.json` 的字段
 

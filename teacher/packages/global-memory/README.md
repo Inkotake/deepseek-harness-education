@@ -11,9 +11,13 @@ re-create.
 Spec: [`teacher/TEACHER-MODE-PLAN.md`](../TEACHER-MODE-PLAN.md) §二, §四 (P0-3), §五, §七.
 Schema: [`schema.ts`](./schema.ts). Evidence for every decision: [`DESIGN-NOTES.md`](./DESIGN-NOTES.md).
 
-**Status: design + schema only.** Nothing here is wired into a profile, seed, build script, or
-bundle. `schema.ts` is self-contained and imports nothing, so it type-checks before any
-integration decision is made.
+**Status: implemented, not mounted.** `schema.ts` and this design are the specification;
+`src/` implements them (`index.ts`, `store.ts`, `domain.ts`, `records.ts`, `conflict.ts`,
+`extractor.ts`, `retrieval.ts`, `question-ledger.ts`, `tools.ts`, `wire.ts`, `messages.ts`,
+`ids.ts`) with tests under `tests/`. Nothing is wired into a profile, seed, build script, or
+bundle: the mount row lives in [`MOUNT.md`](./MOUNT.md), and applying it is the integrator's
+step because the host plane is the pinned upstream submodule. `schema.ts` is unchanged and
+still imports nothing, so it type-checks in isolation.
 
 ---
 

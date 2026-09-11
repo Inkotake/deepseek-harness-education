@@ -67,10 +67,11 @@ export function computeSessionMetrics(context) {
   })
   problems.push(...memoryProblems)
 
-  const caseEntries = caseEntry === null
-    ? []
-    : [...caseEntry.mustAskAbout, ...caseEntry.mustNotAskAbout]
-  const rawQuestions = extractQuestions(session, { caseEntries, problems })
+  const rawQuestions = extractQuestions(session, {
+    mustAskEntries: caseEntry?.mustAskAbout ?? [],
+    mustNotEntries: caseEntry?.mustNotAskAbout ?? [],
+    problems,
+  })
 
   const humanMessages = collectHumanMessages(session)
   const taskType = deriveTaskType(caseEntry?.teacherMessage)

@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/",
+    "test": "node --test \"tests/**/*.test.ts\"",
     "install:deps": "pnpm install --lockfile=false"
   },
   "license": "MIT",

@@ -14,7 +14,7 @@
  * @module @teacher-dsh/global-memory/src/domain
  */
 
-import { defineDomain, domainTable, type TableValueOf } from '@deepseek-ai/dsh-storage-domain'
+import { defineDomain, domainTable, type Domain, type TableValueOf } from '@deepseek-ai/dsh-storage-domain'
 import { MEMORY_DOMAIN } from '../schema.ts'
 import {
   INITIAL_MEMORY_META,

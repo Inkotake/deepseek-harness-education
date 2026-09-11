@@ -1,0 +1,102 @@
+[
+  {
+    "id": "mem-subject",
+    "namespace": "profile",
+    "key": "subject",
+    "value": "高中地理",
+    "scope": {
+      "scope_type": "stable"
+    },
+    "source": {
+      "source": "explicit_user",
+      "observed_at": "2025-09-01T00:00:00.000Z"
+    },
+    "confidence": "explicit_user",
+    "updated_at": "2025-09-01T00:00:00.000Z",
+    "expires_at": null
+  },
+  {
+    "id": "mem-grade",
+    "namespace": "environment",
+    "key": "grades_taught",
+    "value": "高一",
+    "scope": {
+      "scope_type": "school_year",
+      "valid_for": "2025-2026"
+    },
+    "source": {
+      "source": "explicit_user",
+      "observed_at": "2024-09-01T00:00:00.000Z"
+    },
+    "confidence": "explicit_user",
+    "updated_at": "2024-09-01T00:00:00.000Z",
+    "expires_at": "2025-08-01T00:00:00.000Z"
+  },
+  {
+    "id": "mem-textbook",
+    "namespace": "environment",
+    "key": "textbook_edition",
+    "value": "人教版",
+    "scope": {
+      "scope_type": "school_year",
+      "valid_for": "2025-2026"
+    },
+    "source": {
+      "source": "explicit_user",
+      "observed_at": "2024-09-01T00:00:00.000Z"
+    },
+    "confidence": "explicit_user",
+    "updated_at": "2024-09-01T00:00:00.000Z",
+    "expires_at": "2025-08-01T00:00:00.000Z"
+  },
+  {
+    "id": "mem-focus",
+    "namespace": "preferences",
+    "key": "pedagogy_preference",
+    "value": "学生喜欢动手实验",
+    "scope": {
+      "scope_type": "stable"
+    },
+    "source": {
+      "source": "strong_inference",
+      "observed_at": "2025-10-02T00:00:00.000Z"
+    },
+    "confidence": "strong_inference",
+    "updated_at": "2025-10-02T00:00:00.000Z",
+    "expires_at": null
+  },
+  {
+    "id": "mem-project",
+    "namespace": "projects",
+    "key": "project_config",
+    "value": "公开课备课中",
+    "scope": {
+      "scope_type": "project",
+      "project_id": "open-lesson"
+    },
+    "source": {
+      "source": "project_config",
+      "observed_at": "2025-11-01T00:00:00.000Z"
+    },
+    "confidence": "explicit_user",
+    "updated_at": "2025-11-01T00:00:00.000Z",
+    "expires_at": null
+  },
+  {
+    "id": "mem-duration",
+    "namespace": "environment",
+    "key": "class_duration_minutes",
+    "value": "45",
+    "scope": {
+      "scope_type": "school_year",
+      "valid_for": "2025-2026"
+    },
+    "source": {
+      "source": "explicit_user",
+      "observed_at": "2024-09-01T00:00:00.000Z"
+    },
+    "confidence": "explicit_user",
+    "updated_at": "2024-09-01T00:00:00.000Z",
+    "expires_at": null
+  }
+]

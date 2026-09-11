@@ -40,8 +40,8 @@ import { DEFAULT_ARTIFACT_TOOLS } from './lib/artifacts.mjs'
 import { renderTextReport } from './lib/report.mjs'
 
 const HERE = import.meta.dirname
-/** Repository root: `teacher/evals/grabme/lib` → up four levels. */
-export const REPO_ROOT = resolve(HERE, '..', '..', '..', '..')
+/** Repository root: `teacher/evals/grabme` → up three levels. */
+export const REPO_ROOT = resolve(HERE, '..', '..', '..')
 /** Default case file, next to this runner's parent directory. */
 export const DEFAULT_CASES_PATH = join(REPO_ROOT, 'teacher', 'evals', 'grabme', 'cases.json')
 

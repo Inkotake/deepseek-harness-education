@@ -113,7 +113,7 @@ export function scoreCase(context) {
 
   const mustAskAbout = caseEntry.mustAskAbout.map((entry, entryIndex) => {
     const askedIn = questions
-      .filter(question => question.attribution.entries.includes(entryIndex))
+      .filter(question => question.attribution.mustAskEntries.includes(entryIndex))
     const inWindow = askedIn.filter(question => question.turn <= 2)
     return {
       entry: entry.entry,
@@ -125,7 +125,7 @@ export function scoreCase(context) {
   })
 
   const mustNotAskAbout = caseEntry.mustNotAskAbout.map((entry, entryIndex) => {
-    const violations = questions.filter(question => question.attribution.entries.includes(entryIndex))
+    const violations = questions.filter(question => question.attribution.mustNotEntries.includes(entryIndex))
     return {
       entry: entry.entry,
       slots: entry.slots,
@@ -232,12 +232,13 @@ export function scoreCase(context) {
 /**
  * Index questions by a case entry so both directions can be counted in one place.
  * @param questions - extracted questions.
- * @param entries - resolved entries.
+ * @param entries - resolved `must_ask_about` entries.
+ * @param direction - which attribution list to read: `mustAskEntries` or `mustNotEntries`.
  * @returns one bucket per entry with the questions attributed to it.
  */
-export function bucketQuestionsByEntry(questions, entries) {
+export function bucketQuestionsByEntry(questions, entries, direction = 'mustAskEntries') {
   return entries.map((entry, index) => ({
     entry: entry.entry,
-    questions: questions.filter(question => question.attribution.entries.includes(index)),
+    questions: questions.filter(question => question.attribution[direction].includes(index)),
   }))
 }

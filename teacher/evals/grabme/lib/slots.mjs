@@ -165,35 +165,55 @@ export function resolveCaseEntry(entry) {
 
 /**
  * Attribute one question to slots, using both the canonical vocabulary and a
- * case's resolved entry table.
+ * case's resolved entry tables.
+ *
+ * `mustAskEntries` and `mustNotEntries` are matched as two separate lists with
+ * separate index spaces. Matching them as one concatenated list would let an
+ * index from the `must_ask_about` list satisfy a `must_not_ask_about` entry, which
+ * is the one mistake this runner must never make: it would report asking the right
+ * thing as asking the forbidden thing.
  *
  * @param questionText - the question as it appears in the log.
- * @param caseEntries - resolved entries from {@link resolveCaseEntry}, or `[]`.
- * @returns `{ canonical, entries, primary, literalMatched }`:
- *   `canonical` is every matched canonical key, `entries` the indices of matched
- *   case entries, `primary` the single slot identity used for repeat detection
- *   (`null` when nothing matched, which the report renders as `unclassified`),
- *   and `literalMatched` the entry texts matched by exact substring.
+ * @param options - `{ mustAskEntries, mustNotEntries }`, both optional.
+ * @returns `{ canonical, mustAskEntries, mustNotEntries, primary, literalMatched }`:
+ *   `canonical` is every matched canonical key, the two entry lists hold indices
+ *   into their own tables, `primary` is the single slot identity used for repeat
+ *   detection (`null` when nothing matched, which the report renders as
+ *   `unclassified`), and `literalMatched` lists the entry texts matched literally.
  */
-export function attributeQuestion(questionText, caseEntries) {
+export function attributeQuestion(questionText, options = {}) {
+  const mustAskEntries = options.mustAskEntries ?? []
+  const mustNotEntries = options.mustNotEntries ?? []
   const { slots, matches } = matchSlots(questionText)
   const normalized = normalizeText(questionText)
-  const entries = []
-  const literalMatched = []
-  for (let index = 0; index < caseEntries.length; index += 1) {
-    const entry = caseEntries[index]
-    const literalHit = entry.literal.length >= 2 && normalized.includes(entry.literal)
-    const slotHit = entry.slots.some(slot => slots.includes(slot))
-    if (literalHit || slotHit) {
-      entries.push(index)
-      if (literalHit) literalMatched.push(entry.entry)
+
+  const hitsIn = (entries) => {
+    const hits = []
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index]
+      const literalHit = entry.literal.length >= 2 && normalized.includes(entry.literal)
+      const slotHit = entry.slots.some(slot => slots.includes(slot))
+      if (literalHit || slotHit) hits.push(index)
     }
+    return hits
   }
+
+  const literalMatched = []
+  for (const entry of [...mustAskEntries, ...mustNotEntries]) {
+    if (entry.literal.length >= 2 && normalized.includes(entry.literal)) literalMatched.push(entry.entry)
+  }
+
   const literalOnly = [...literalMatched].sort((a, b) => normalizeText(b).length - normalizeText(a).length)[0]
   const primary = matches.length > 0
     ? matches[0].slot
     : literalOnly === undefined ? null : `literal:${literalOnly}`
-  return { canonical: slots, entries, primary, literalMatched }
+  return {
+    canonical: slots,
+    mustAskEntries: hitsIn(mustAskEntries),
+    mustNotEntries: hitsIn(mustNotEntries),
+    primary,
+    literalMatched,
+  }
 }
 
 /**

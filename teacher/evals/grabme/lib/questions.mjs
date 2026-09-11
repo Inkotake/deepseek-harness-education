@@ -112,14 +112,17 @@ export function questionSentences(text) {
  * Extract every clarification question in one session, with its answer.
  *
  * @param session - the session model from `lib/load.mjs`.
- * @param options - `caseEntries` (resolved case entries) and `problems`, an array
+ * @param options - `mustAskEntries` / `mustNotEntries` (resolved case entries) and
+ *   `problems`, an array
  *   the extractor appends structural findings to (an `ask_user_question` call
  *   whose arguments are not JSON, or whose `questions` array is empty).
  * @returns the questions in log order; each is
  *   `{ kind, turn, seq, callId, questionId, text, header, options, multiSelect, answer, attribution }`.
  */
 export function extractQuestions(session, options = {}) {
-  const caseEntries = options.caseEntries ?? []
+  const mustAskEntries = options.mustAskEntries ?? []
+  const mustNotEntries = options.mustNotEntries ?? []
+  const entryOptions = { mustAskEntries, mustNotEntries }
   const problems = options.problems ?? []
 
   const questions = []
@@ -178,7 +181,7 @@ export function extractQuestions(session, options = {}) {
           : [],
         multiSelect: entry?.multi_select === true,
         answer: answer === undefined ? null : answerFromToolAnswer(answer, { turn: answers.turn, seq: answers.seq }),
-        attribution: attributeQuestion(text, caseEntries),
+        attribution: attributeQuestion(text, entryOptions),
       })
     }
   }
@@ -201,7 +204,7 @@ export function extractQuestions(session, options = {}) {
           options: [],
           multiSelect: false,
           answer: null,
-          attribution: attributeQuestion(sentence, caseEntries),
+          attribution: attributeQuestion(sentence, entryOptions),
         })
       }
     }

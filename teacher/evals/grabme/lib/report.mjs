@@ -41,9 +41,9 @@ export function formatValue(value) {
   return String(value)
 }
 
-/** Pad to a fixed width after ASCII escaping, so columns line up in both modes. */
-function pad(text, width) {
-  const value = String(text)
+/** Pad a cell to a fixed width. Escaping happens first so columns line up in `--ascii` mode too. */
+function pad(text, width, ascii) {
+  const value = ascii ? escapeNonAscii(text) : String(text)
   return value.length >= width ? value : value + ' '.repeat(width - value.length)
 }
 
@@ -67,25 +67,25 @@ export function renderTextReport(report, options = {}) {
   lines.push('')
 
   lines.push(out('== metrics =='))
-  lines.push(out(`${pad('metric', 32)}${pad('value', 12)}${pad('target', 12)}${pad('verdict', 10)}denominators`))
+  lines.push(out(`${pad('metric', 32, ascii)}${pad('value', 12, ascii)}${pad('target', 30, ascii)}${pad('verdict', 10, ascii)}denominators`))
   for (const [key, label] of METRIC_ORDER) {
     const value = formatValue(report.aggregate.metrics[key])
     const target = report.aggregate.targets[key].target
     const pass = report.aggregate.passes[key]
     const verdict = pass === null || pass === undefined ? 'observe' : pass ? 'PASS' : 'FAIL'
-    lines.push(out(`${pad(label, 32)}${pad(value, 12)}${pad(target, 12)}${pad(verdict, 10)}${describeDenominator(key, report.aggregate)}`))
+    lines.push(out(`${pad(label, 32, ascii)}${pad(value, 12, ascii)}${pad(target, 30, ascii)}${pad(verdict, 10, ascii)}${describeDenominator(key, report.aggregate)}`))
   }
   lines.push('')
 
   lines.push(out('== per session =='))
-  lines.push(out(`${pad('session', 28)}${pad('case', 32)}${pad('Q', 5)}${pad('Qmem', 6)}${pad('r(s)', 6)}${pad('f(s)', 7)}${pad('direct', 7)}|M(s)|`))
+  lines.push(out(`${pad('session', 36, ascii)}${pad('case', 36, ascii)}${pad('Q', 5, ascii)}${pad('Qmem', 6, ascii)}${pad('r(s)', 6, ascii)}${pad('f(s)', 7, ascii)}${pad('direct', 7, ascii)}|M(s)|`))
   for (const session of report.sessions) {
     lines.push(out(
-      `${pad(session.sessionId, 28)}${pad(session.caseId ?? '-', 32)}${pad(session.questionCount, 5)}`
-      + `${pad(session.questions.filter(question => question.repeated).length, 6)}`
-      + `${pad(session.clarificationRounds, 6)}`
-      + `${pad(session.firstArtifactTurn === null ? 'inf' : session.firstArtifactTurn, 7)}`
-      + `${pad(session.directExecution.value, 7)}${session.memory.recordCount}`,
+      `${pad(session.sessionId, 36, ascii)}${pad(session.caseId ?? '-', 36, ascii)}${pad(session.questionCount, 5, ascii)}`
+      + `${pad(session.questions.filter(question => question.repeated).length, 6, ascii)}`
+      + `${pad(session.clarificationRounds, 6, ascii)}`
+      + `${pad(session.firstArtifactTurn === null ? 'inf' : session.firstArtifactTurn, 7, ascii)}`
+      + `${pad(session.directExecution.value, 7, ascii)}${session.memory.recordCount}`,
     ))
   }
   lines.push('')
@@ -176,7 +176,7 @@ function describeDenominator(key, aggregate) {
     case 'repeatedQuestionRate':
       return `|Qmem|=${aggregate.counts.repeatedQuestions} |Q|=${aggregate.denominators.questions} (ttl-exempt=${aggregate.counts.exemptReconfirmations})`
     case 'usefulQuestionRate':
-      return `changed=${aggregate.counts.changed} |Q|-undecidable=${aggregate.denominators.usefulQuestionDenominator} (undecidable=${aggregate.counts.changedUndecidable})`
+      return `changed=${aggregate.counts.changedQuestions} |Q|-undecidable=${aggregate.denominators.usefulQuestionDenominator} (undecidable=${aggregate.counts.changedUndecidable})`
     case 'timeToFirstUsefulArtifact':
       return `sessions with artifacts=${aggregate.denominators.firstArtifactSessions} no-artifact=${aggregate.counts.noArtifactSessions.length}`
     case 'memoryPrecision':

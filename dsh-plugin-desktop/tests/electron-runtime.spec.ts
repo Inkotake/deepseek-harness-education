@@ -398,7 +398,7 @@ describe('Electron desktop runtime', () => {
     expect(electron.templateIcon.setTemplateImage).toHaveBeenCalledWith(true)
     expect(electron.trays[0]?.image).toBe(electron.templateIcon)
     expect(electron.menuTemplates[0]).toEqual(expect.arrayContaining([
-      expect.objectContaining({ label: 'Switch to Extended Window', enabled: true }),
+      expect.objectContaining({ label: 'Switch to Enhanced Mode', enabled: true }),
     ]))
 
     const titleListener = electron.browserWindowOn.mock.calls.find(([event]) => event === 'page-title-updated')?.[1]
@@ -749,7 +749,7 @@ describe('Electron desktop runtime', () => {
     expect(electron.Menu.setApplicationMenu).not.toHaveBeenCalled()
     expect(electron.browserWindows[0]?.removeMenu).not.toHaveBeenCalled()
     expect(electron.menuTemplates[0]).toEqual(expect.arrayContaining([
-      expect.objectContaining({ label: 'Switch to Extended Window', enabled: false }),
+      expect.objectContaining({ label: 'Switch to Enhanced Mode', enabled: false }),
     ]))
 
     await release()
@@ -971,7 +971,7 @@ describe('Electron desktop runtime', () => {
     expect((electron.menuTemplates.at(-1) as Array<{ label?: string }>).map(item => item.label))
       .toEqual(expect.arrayContaining([
         '打开 DSH Desktop',
-        '切换到扩展窗口',
+        '切换到增强模式',
         '退出',
       ]))
 
@@ -980,7 +980,7 @@ describe('Electron desktop runtime', () => {
     expect((electron.menuTemplates.at(-1) as Array<{ label?: string }>).map(item => item.label))
       .toEqual(expect.arrayContaining([
         'Open DSH Desktop',
-        'Switch to Extended Window',
+        'Switch to Enhanced Mode',
         'Quit',
       ]))
 
@@ -990,7 +990,7 @@ describe('Electron desktop runtime', () => {
     expect((electron.menuTemplates.at(-1) as Array<{ label?: string }>).map(item => item.label))
       .toEqual(expect.arrayContaining([
         '打开 DSH Desktop',
-        '切换到扩展窗口',
+        '切换到增强模式',
         '退出',
       ]))
 
@@ -1434,7 +1434,7 @@ describe('Electron desktop runtime', () => {
     await release()
   })
 
-  it('cycles from compatibility to extended mode when its tray command is clicked', async () => {
+  it('cycles from compatibility to advanced mode when its tray command is clicked', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
     const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
     const requestModeChange = vi.fn(async () => {})
@@ -1443,10 +1443,10 @@ describe('Electron desktop runtime', () => {
 
     await runtime.mountScheduled()
     const item = (electron.menuTemplates[0] as Array<{ label?: string, click?: () => void }>)
-      .find(candidate => candidate.label === 'Switch to Extended Window')
+      .find(candidate => candidate.label === 'Switch to Enhanced Mode')
     expect(item).toBeDefined()
     item?.click?.()
-    await vi.waitFor(() => { expect(requestModeChange).toHaveBeenCalledWith('extended') })
+    await vi.waitFor(() => { expect(requestModeChange).toHaveBeenCalledWith('advanced') })
 
     await release()
   })
@@ -1484,7 +1484,7 @@ describe('Electron desktop runtime', () => {
       'Open DSH Desktop', undefined,
       'Earlier Tool', 'Later Tool', undefined,
       'Check for Updates…', undefined,
-      'Switch to Extended Window', undefined,
+      'Switch to Enhanced Mode', undefined,
       'Quit',
     ])
     expect(electron.menuTemplates.at(-1)).toEqual(expect.arrayContaining([
@@ -2216,14 +2216,14 @@ describe('Electron desktop runtime', () => {
     await release()
   })
 
-  it('keeps an extended Windows 10 window opaque when material is off', async () => {
+  it('keeps a framed Windows 10 window opaque when material is off', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     electron.nativeTheme.themeSource = 'light'
     const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
     const runtime = new ElectronDesktopRuntime(async () => {})
     const release = runtime.schedule({
       ...spec,
-      mode: 'extended',
+      mode: 'compatibility',
       material: 'off',
       windowsBuild: 19_045,
       readThemeSource: () => 'dark',
@@ -2251,7 +2251,7 @@ describe('Electron desktop runtime', () => {
     const runtime = new ElectronDesktopRuntime(async () => {})
     const release = runtime.schedule({
       ...spec,
-      mode: 'extended',
+      mode: 'compatibility',
       material: 'off',
       windowsBuild: 22_621,
       readThemeSource: () => 'dark',

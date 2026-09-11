@@ -2226,7 +2226,7 @@ describe('Electron desktop runtime', () => {
     const runtime = new ElectronDesktopRuntime(async () => {})
     const release = runtime.schedule({
       ...spec,
-      mode: 'extended',
+      mode: 'compatibility',
       material: 'off',
       windowsBuild: 19_045,
       readThemeSource: () => 'dark',
@@ -2254,7 +2254,7 @@ describe('Electron desktop runtime', () => {
     const runtime = new ElectronDesktopRuntime(async () => {})
     const release = runtime.schedule({
       ...spec,
-      mode: 'extended',
+      mode: 'compatibility',
       material: 'off',
       windowsBuild: 22_621,
       readThemeSource: () => 'dark',

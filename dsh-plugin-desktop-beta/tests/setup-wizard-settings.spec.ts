@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   defaultDesktopSetupWizardSettings,
   migrateDesktopBrowserAccessSettings,
+  migrateDesktopShellModeSettings,
   migrateDesktopWindowMaterialSettings,
   readDesktopSetupWizardSettings,
   updateDesktopSetupWizardSettings,
@@ -161,7 +162,7 @@ describe('Desktop Setup Wizard settings document', () => {
     const root = temporaryDirectory()
     const path = join(root, 'nested', 'settings.yml')
     const next = values({
-      mode: 'extended',
+      mode: 'advanced',
       macosMaterial: 'transparent',
       openBrowser: false,
       networkExposure: 'loopback',
@@ -424,11 +425,44 @@ describe('Desktop Setup Wizard settings document', () => {
     })
   })
 
+  it('rewrites the removed extended shell mode to advanced and keeps the rest of the document', async () => {
+    const root = temporaryDirectory()
+    const path = join(root, 'settings.yaml')
+    writeFileSync(path, [
+      '# preserve mode migration comments',
+      'unrelated:',
+      '  keep: true',
+      'dsh-desktop:',
+      '  mode: extended',
+      '  windowsMaterial: off',
+      '  future: retained',
+      '',
+    ].join('\n'), { mode: 0o600 })
+
+    // The read boundary already maps the removed value, so the document is safe to open before the
+    // rewrite happens — which is what makes a read-only settings file survivable.
+    expect(readDesktopSetupWizardSettings(path).mode).toBe('advanced')
+    await expect(migrateDesktopShellModeSettings(path)).resolves.toBe(true)
+    // Idempotent: once rewritten there is nothing left to change, so later launches stay read-only.
+    await expect(migrateDesktopShellModeSettings(path)).resolves.toBe(false)
+
+    const migrated = readFileSync(path, 'utf8')
+    expect(migrated).toContain('# preserve mode migration comments')
+    expect(parseDocument(migrated).toJS()).toMatchObject({
+      unrelated: { keep: true },
+      'dsh-desktop': {
+        mode: 'advanced',
+        windowsMaterial: 'off',
+        future: 'retained',
+      },
+    })
+  })
+
   it('serializes concurrent complete updates without producing a torn document', async () => {
     const root = temporaryDirectory()
     const path = join(root, 'settings.yaml')
     writeFileSync(path, 'unrelated:\n  keep: true\n', { mode: 0o600 })
-    const first = values({ mode: 'extended', windowsMaterial: 'off', openBrowser: false, networkExposure: 'loopback' })
+    const first = values({ mode: 'advanced', windowsMaterial: 'off', openBrowser: false, networkExposure: 'loopback' })
     const second = values({ mode: 'compatibility', windowsMaterial: 'mica', networkExposure: 'loopback' })
 
     await Promise.all([

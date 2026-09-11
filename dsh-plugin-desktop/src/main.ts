@@ -122,12 +122,14 @@ import {
 } from './setup-wizard-state.ts'
 import {
   migrateDesktopBrowserAccessSettings,
+  migrateDesktopShellModeSettings,
   migrateDesktopWindowMaterialSettings,
   readDesktopSetupWizardSettings,
   updateDesktopSetupWizardSettings,
   type DesktopSetupWizardSettings,
 } from './setup-wizard-settings.ts'
 import type { DesktopSetupWizardResult } from './setup-wizard-contract.ts'
+import { storedDesktopShellMode } from './runtime.ts'
 import { DesktopSetupWizardWindow } from './setup-wizard-window.ts'
 import {
   TEACHER_DSH_SETUP_OUTCOME,
@@ -338,7 +340,9 @@ function desktopProfilePreferencesFromSettings(
   market: DesktopMarketProvider,
 ): DesktopProfilePreferences {
   return Object.freeze({
-    mode: desktop.mode,
+    // Normalize the removed `extended` alias here rather than copying it forward: a preferences
+    // document written now should not carry a value that no longer names a mode.
+    mode: storedDesktopShellMode(desktop.mode) ?? 'compatibility',
     openBrowser: desktop.openBrowser,
     networkExposure: desktop.networkExposure,
     notifications: Object.freeze({ ...notifications }),
@@ -1068,7 +1072,18 @@ async function start(): Promise<void> {
           `${BIN_NAME}: failed to persist removed Acrylic material migration: ${cause instanceof Error ? cause.message : String(cause)}`,
         )
       }
-      if (browserAccessMigrated || windowMaterialMigrated) {
+      let shellModeMigrated = false
+      try {
+        shellModeMigrated = await migrateDesktopShellModeSettings(prepared.settingsDocument)
+      } catch (cause) {
+        // The removed `extended` mode is already normalized to `advanced` by the read boundary. A
+        // read-only settings file must not turn the removal into a startup failure merely because
+        // the durable cleanup could not be saved.
+        electronLogger.error(
+          `${BIN_NAME}: failed to persist removed extended mode migration: ${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      }
+      if (browserAccessMigrated || windowMaterialMigrated || shellModeMigrated) {
         prepared = prepareDesktopProfile(
           process.env.DSH_TELEMETRY_DISABLED,
           homeDir,
@@ -1100,6 +1115,15 @@ async function start(): Promise<void> {
         // even after this Profile has completed its one-time preference import.
         electronLogger.error(
           `${BIN_NAME}: failed to persist removed Acrylic material migration: ${cause instanceof Error ? cause.message : String(cause)}`,
+        )
+      }
+      try {
+        await migrateDesktopShellModeSettings(prepared.settingsDocument)
+      } catch (cause) {
+        // Keep retrying the same rewrite on later launches, for the same reason as the Acrylic
+        // cleanup above: a failed save must not leave the document naming a removed mode forever.
+        electronLogger.error(
+          `${BIN_NAME}: failed to persist removed extended mode migration: ${cause instanceof Error ? cause.message : String(cause)}`,
         )
       }
       await selectDesktopMarketProvider(marketUserDataDir, profilePreferences.market)

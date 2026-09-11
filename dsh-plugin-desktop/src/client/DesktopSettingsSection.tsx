@@ -532,13 +532,17 @@ export function DesktopSettingsSection({
   const settingsWritable = desktop.status === 'ready' && desktop.writable
   const notificationsWritable = notifications.status === 'ready' && notifications.writable
   const storedMode = desktop.value?.mode ?? initialMode
+  // A settings document written before `extended` was removed still carries it, so normalize once
+  // here: every consumer below then sees a mode that actually exists. The persisted view keeps the
+  // raw value (see `DesktopShellSettings.mode`) so the durable migration can still recognise and
+  // rewrite it, exactly as the removed Acrylic material is still readable above.
+  const mode: DesktopShellSettings['mode'] = storedMode === 'extended' ? 'advanced' : storedMode
   const configuredNetworkExposure = desktop.value?.networkExposure ?? 'loopback'
   const browserAccess = desktopBrowserAccessEnabled(
-    storedMode,
+    mode,
     desktop.value?.openBrowser ?? false,
     configuredNetworkExposure,
   )
-  const mode = storedMode
   const networkExposure = browserAccess ? configuredNetworkExposure : 'loopback'
   const notificationValue = notifications.value ?? {
     enabled: true,
@@ -779,14 +783,6 @@ export function DesktopSettingsSection({
             disabled={!settingsWritable || busy !== undefined || restart !== 'none'}
             action={() => { setMode('compatibility') }}
             status={mode === 'compatibility' ? t('selected') : undefined}
-          />
-          <Choice
-            title={t('extendedMode')}
-            body={platform === 'linux' ? t('extendedUnavailableLinux') : t('extendedModeBody')}
-            selected={mode === 'extended'}
-            disabled={platform === 'linux' || !settingsWritable || busy !== undefined || restart !== 'none'}
-            action={() => { setMode('extended') }}
-            status={mode === 'extended' ? t('selected') : undefined}
           />
           <Choice
             title={t('advancedMode')}

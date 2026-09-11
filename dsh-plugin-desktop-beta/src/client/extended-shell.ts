@@ -1,64 +1,36 @@
-/** Independent Desktop frame shared by compatibility and extended modes. */
+/**
+ * The framed Desktop chrome.
+ *
+ * This module used to own a second presentation mode as well, `extended`, which claimed the same
+ * layout contract `advanced` owns. With both present one of them was always the wrong answer, so
+ * `extended` was removed and only the frame remains. The filename is kept because the two product
+ * variants share this tree byte-for-byte and a rename would be churn in both for no behavioural
+ * gain.
+ *
+ * @module dsh-plugin-desktop/src/client/extended-shell
+ */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from './contracts.ts'
-import { ExtendedFrame } from './ExtendedFrame.tsx'
 import type { DesktopClientEnvironment } from './environment.ts'
 import { DesktopFrameTitlebar } from './ExtendedTitlebar.tsx'
 import { installExtendedStyles } from './extended-styles.ts'
-import { DesktopLayoutState } from './layout-state.ts'
-import { claimDesktopLayout } from './layout-service.ts'
-import { installDesktopOwnedStyles } from './styles.ts'
-import { DesktopThemePresenter } from './theme-presenter.ts'
 
 /**
- * Own the extended root/sidebar surface without reusing enhanced-mode chrome.
+ * Layer the framed Desktop chrome over the upstream root.
  *
- * When the upstream `dsh-client-ui-layout` wins the shared `layout` service,
- * the owned presentation (layout, owned styles, presenter, root slot) is
- * skipped and `false` returned; the independent framed chrome can still be
- * layered over the upstream frame by the caller (#517).
+ * The frame does not take the `root` slot, so the official client keeps presenting the content and
+ * this only repaints the surrounding chrome. The band renders no controls of its own, so it injects
+ * only the generation environment its platform and material attributes are derived from.
+ * @param ctx - the client context the effects and slots register against.
+ * @param environment - the validated renderer environment for this generation.
  */
-function applyExtendedOwnedShell(ctx: ClientContext, environment: DesktopClientEnvironment): boolean {
-  const desktopLayout = new DesktopLayoutState()
-  const upstreamOwnsLayout = !claimDesktopLayout(ctx, desktopLayout)
-  if (upstreamOwnsLayout) return false
-
-  ctx.effect(
-    () => installDesktopOwnedStyles(),
-    'desktop: extended owned layout styles',
-  )
-
-  ctx.effect(() => {
-    const presenter = new DesktopThemePresenter()
-    presenter.apply(ctx.theme.getTheme())
-    const off = ctx.on('theme/change', snapshot => { presenter.apply(snapshot) })
-    return () => {
-      off()
-      presenter.dispose()
-    }
-  }, 'desktop: extended theme presenter')
-
-  ctx.effect(() => ctx.slots.register({
-    name: 'root',
-    children: {
-      'sidebar': { kind: 'single', scope: 'root' },
-      'conversation': { kind: 'single', scope: 'session-maybe' },
-      'details': { kind: 'single', scope: 'session' },
-      'shell.overlay': { kind: 'list', scope: 'root' },
-    },
-    inject: () => ({ layout: desktopLayout, platform: environment.platform }),
-  }, ExtendedFrame), 'desktop: extended root slot')
-
-  return true
-}
-
 export function applyFramedShell(
   ctx: ClientContext,
   environment: DesktopClientEnvironment,
 ): void {
-  if (environment.mode !== 'compatibility' && environment.mode !== 'extended') {
+  if (environment.mode !== 'compatibility') {
     throw new Error(`dsh-plugin-desktop: framed shell received mode ${JSON.stringify(environment.mode)}`)
   }
 
@@ -89,18 +61,4 @@ export function applyFramedShell(
     order: -1000,
     inject: () => ({ environment }),
   }, DesktopFrameTitlebar))
-}
-
-/** Compose the extended-owned layout beneath its independent Desktop frame. */
-export function applyExtendedShell(
-  ctx: ClientContext,
-  environment: DesktopClientEnvironment,
-): void {
-  if (environment.mode !== 'extended') {
-    throw new Error(`dsh-plugin-desktop: extended shell received mode ${JSON.stringify(environment.mode)}`)
-  }
-  // Losing the layout race only drops the owned presentation; the framed
-  // chrome (titlebar overlay) still layers over whatever presents the root.
-  applyExtendedOwnedShell(ctx, environment)
-  applyFramedShell(ctx, environment)
 }

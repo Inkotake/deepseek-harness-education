@@ -71,16 +71,14 @@ import {
 
 /** Return the presentation mode opposite the active generation. */
 export function nextDesktopShellMode(mode: DesktopShellSpec['mode']): DesktopShellSpec['mode'] {
-  if (mode === 'compatibility') return 'extended'
-  if (mode === 'extended') return 'advanced'
-  return 'compatibility'
+  return mode === 'compatibility' ? 'advanced' : 'compatibility'
 }
 
 /** Return the tray command describing the mode that will be activated. */
 export function modeToggleLabel(mode: DesktopShellSpec['mode'], locale: DesktopLocale = 'en'): string {
-  if (mode === 'compatibility') return desktopTrayLabel(locale, 'switchToExtended')
-  if (mode === 'extended') return desktopTrayLabel(locale, 'switchToAdvanced')
-  return desktopTrayLabel(locale, 'switchToCompatibility')
+  return mode === 'compatibility'
+    ? desktopTrayLabel(locale, 'switchToAdvanced')
+    : desktopTrayLabel(locale, 'switchToCompatibility')
 }
 
 /**

@@ -88,22 +88,6 @@ export function advancedWindowOptions(
   })
 }
 
-/** Build the visible command-bar window used by extended mode. */
-export function extendedWindowOptions(
-  spec: DesktopShellSpec,
-  icon: NativeImage,
-  platform: DesktopPlatform,
-  preload: string,
-): BrowserWindowConstructorOptions {
-  if (spec.mode !== 'extended') {
-    throw new Error(`dsh-plugin-desktop: unsupported extended window mode ${spec.mode}`)
-  }
-  return customChromeWindowOptions(spec, icon, platform, preload, {
-    titlebarHeight: DESKTOP_FRAME_HEIGHT,
-    macosTrafficLightTop: DESKTOP_FRAME_MACOS_TRAFFIC_LIGHT_TOP,
-  })
-}
-
 interface CustomChromeGeometry {
   readonly titlebarHeight: number
   readonly macosTrafficLightTop: number
@@ -171,6 +155,5 @@ export function desktopWindowOptions(
   preload: string,
 ): BrowserWindowConstructorOptions {
   if (spec.mode === 'compatibility') return compatibilityWindowOptions(spec, icon, platform, preload)
-  if (spec.mode === 'extended') return extendedWindowOptions(spec, icon, platform, preload)
   return advancedWindowOptions(spec, icon, platform, preload)
 }

@@ -131,7 +131,7 @@ export interface DesktopSettings {
 
 /** Schema registered with the standard settings service. */
 export const DesktopSettingsSchema: z<DesktopSettings> = z.object({
-  mode: z.union(['compatibility', 'extended', 'advanced'] as const).default('compatibility'),
+  mode: z.union(['compatibility', 'advanced'] as const).default('compatibility'),
   macosMaterial: z.union(['off', 'transparent'] as const).default(DEFAULT_MACOS_WINDOW_MATERIAL),
   windowsMaterial: z.union(['off', 'acrylic', 'mica'] as const).default(DEFAULT_WINDOWS_WINDOW_MATERIAL),
   port: z.number().step(1).min(0).max(65_535).default(DESKTOP_DEFAULT_WEB_PORT),
@@ -164,7 +164,7 @@ export interface Config {
 
 /** Validated native window configuration. */
 export const Config: z<Config> = z.object({
-  mode: z.union(['compatibility', 'extended', 'advanced'] as const).default('compatibility'),
+  mode: z.union(['compatibility', 'advanced'] as const).default('compatibility'),
   macosMaterial: z.union(['off', 'transparent'] as const).default(DEFAULT_MACOS_WINDOW_MATERIAL),
   windowsMaterial: z.union(['off', 'acrylic', 'mica'] as const).default(DEFAULT_WINDOWS_WINDOW_MATERIAL),
   port: z.number().step(1).min(0).max(65_535).default(DESKTOP_DEFAULT_WEB_PORT),
@@ -195,7 +195,7 @@ export function desktopRendererUrl(
   url.searchParams.set('dsh-desktop-platform', platform)
   url.searchParams.set('dsh-desktop-version', appVersion)
   url.searchParams.set('dsh-desktop-material', material)
-  if (mode === 'extended' || (mode === 'compatibility' && platform !== 'linux')) {
+  if (mode === 'compatibility' && platform !== 'linux') {
     // Body-level plugin portals do not inherit the framed root's geometry.
     // Publish the exact content boundary so they can yield Desktop chrome.
     url.searchParams.set('dsh-desktop-titlebar-inset', String(DESKTOP_FRAME_HEIGHT))

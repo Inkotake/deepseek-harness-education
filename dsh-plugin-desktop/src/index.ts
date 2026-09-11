@@ -58,7 +58,8 @@ import {
 import type {} from './desktop-settings-controller.ts'
 import { DESKTOP_LAN_HTTPS_CA_PATH } from './lan-https-runtime.ts'
 import { desktopBootRecoveryInjections } from './desktop-boot-recovery.ts'
-import type { DesktopLocale, DesktopShellMode } from './runtime.ts'
+import { storedDesktopShellMode } from './runtime.ts'
+import type { DesktopLocale, DesktopShellMode, PersistedDesktopShellMode } from './runtime.ts'
 import type {} from './runtime.ts'
 import { DESKTOP_DEFAULT_WEB_PORT } from './desktop-port.ts'
 import {
@@ -115,7 +116,7 @@ function desktopLocalePreference(preference: string | undefined): DesktopLocale 
 /** Desktop settings presented by the standard settings service. */
 export interface DesktopSettings {
   /** Native presentation selected for the next application generation. */
-  mode: DesktopShellMode
+  mode: PersistedDesktopShellMode
   /** Native translucency preference used on macOS custom-chrome modes. */
   macosMaterial: MacosWindowMaterial
   /** Native backdrop preference used on Windows custom-chrome modes. */
@@ -165,7 +166,7 @@ export interface Config {
 
 /** Validated native window configuration. */
 export const Config: z<Config> = z.object({
-  mode: z.union(['compatibility', 'extended', 'advanced'] as const).default('compatibility'),
+  mode: z.union(['compatibility', 'advanced'] as const).default('compatibility'),
   macosMaterial: z.union(['off', 'transparent'] as const).default(DEFAULT_MACOS_WINDOW_MATERIAL),
   windowsMaterial: z.union(['off', 'acrylic', 'mica'] as const).default(DEFAULT_WINDOWS_WINDOW_MATERIAL),
   port: z.number().step(1).min(0).max(65_535).default(DESKTOP_DEFAULT_WEB_PORT),
@@ -196,7 +197,7 @@ export function desktopRendererUrl(
   url.searchParams.set('dsh-desktop-platform', platform)
   url.searchParams.set('dsh-desktop-version', appVersion)
   url.searchParams.set('dsh-desktop-material', material)
-  if (mode === 'extended' || (mode === 'compatibility' && platform !== 'linux')) {
+  if (mode === 'compatibility' && platform !== 'linux') {
     // Body-level plugin portals do not inherit the framed root's geometry.
     // Publish the exact content boundary so they can yield Desktop chrome.
     url.searchParams.set('dsh-desktop-titlebar-inset', String(DESKTOP_FRAME_HEIGHT))
@@ -252,7 +253,7 @@ export function apply(ctx: Context, config: Config): void {
     {
       applies: 'restart',
       validate: (value) => {
-        if (!desktopBrowserAccessAvailable(value.mode) && value.openBrowser) {
+        if (!desktopBrowserAccessAvailable(storedDesktopShellMode(value.mode) ?? 'compatibility') && value.openBrowser) {
           throw new Error('dsh-plugin-desktop: browser access requires compatibility mode')
         }
         if (value.mode !== 'compatibility' && runtime.platform === 'linux') {
@@ -410,7 +411,7 @@ export function apply(ctx: Context, config: Config): void {
     updateLiveWebAccess(browserAccess.ordinaryBrowserEnabled, config.networkExposure)
     const stopWatching = settings.watch((next) => {
       const nextBrowserAccess = desktopBrowserAccessEnabled(
-        next.mode,
+        storedDesktopShellMode(next.mode) ?? 'compatibility',
         next.openBrowser,
         next.networkExposure,
       )

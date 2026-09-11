@@ -49,18 +49,6 @@ export function desktopWindowService(environment: DesktopClientEnvironment): Des
       ),
     })
   }
-  if (environment.mode === 'extended') {
-    return Object.freeze({
-      ...environment,
-      availableMaterials,
-      safeAreaInsets: frozenInsets(DESKTOP_FRAME_HEIGHT),
-      dragRegion: frozenDragRegion(
-        DESKTOP_FRAME_HEIGHT,
-        environment.platform === 'darwin' ? MACOS_TRAFFIC_LIGHT_SAFE_WIDTH : 0,
-        environment.platform === 'win32' ? WINDOWS_CAPTION_CONTROLS_WIDTH : 0,
-      ),
-    })
-  }
   if (environment.platform === 'darwin') {
     return Object.freeze({
       ...environment,

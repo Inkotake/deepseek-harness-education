@@ -41,7 +41,7 @@ import {
   parseDesktopOpenBrowser,
   type DesktopNetworkExposure,
 } from './desktop-network.ts'
-import type { DesktopShellMode } from './runtime.ts'
+import { storedDesktopShellMode, type DesktopShellMode } from './runtime.ts'
 import {
   DESKTOP_PACKAGE_NAME,
   DESKTOP_PACKAGE_NAMES,
@@ -124,8 +124,9 @@ const MARKET_PACKAGE_NAMES: ReadonlySet<string> = new Set([
  */
 export function parseDesktopShellMode(value: unknown): DesktopShellMode {
   if (value === undefined) return DEFAULT_DESKTOP_SHELL_MODE
-  if (value === 'compatibility' || value === 'extended' || value === 'advanced') return value
-  throw new Error(`${BIN_NAME}: ${DESKTOP_SETTINGS_NAMESPACE}.mode must be "compatibility", "extended", or "advanced"`)
+  const mode = storedDesktopShellMode(value)
+  if (mode !== undefined) return mode
+  throw new Error(`${BIN_NAME}: ${DESKTOP_SETTINGS_NAMESPACE}.mode must be "compatibility" or "advanced"`)
 }
 
 /** Parse the requested loopback Web port and reject values Node cannot listen on. */
@@ -964,7 +965,7 @@ export function prepareDesktopProfile(
       trustedHosts: webRuntimeTrustedHosts(webRuntimeConfig.trustedHosts, lanAddresses),
     },
   })
-  if (mode === 'advanced' || mode === 'extended') {
+  if (mode === 'advanced') {
     for (const [id, packageName] of [
       ['ui-layout', UI_LAYOUT_PACKAGE],
       ['ui-sidebar', UI_SIDEBAR_PACKAGE],

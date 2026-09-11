@@ -30,7 +30,7 @@ const input: DesktopSetupWizardInput = {
   profileName: 'work',
   platform: 'darwin',
   micaSupported: false,
-  mode: 'extended',
+  mode: 'advanced',
   macosMaterial: 'transparent',
   windowsMaterial: 'off',
   openBrowser: false,

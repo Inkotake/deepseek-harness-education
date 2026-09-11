@@ -28,7 +28,7 @@ export function AdvancedFrame(props: AdvancedFrameProps) {
 
 /** Shared panel mechanics below the two mode-specific root boundaries. */
 export function DesktopOwnedFrame({ layout, mode, platform, renderSlot, SessionProvider, useSessions }: AdvancedFrameProps & {
-  readonly mode: 'extended' | 'advanced'
+  readonly mode: 'advanced'
 }) {
   const subscribeLayout = useCallback((listener: () => void) => layout.subscribe(listener), [layout])
   const readLayout = useCallback(() => layout.getSnapshot(), [layout])

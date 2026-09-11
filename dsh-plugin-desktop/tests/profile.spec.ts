@@ -756,7 +756,10 @@ virtualStoreDirMaxLength: 60
     }))
   })
 
-  it('replaces the official root layout for extended window mode while retaining its occupants', () => {
+  it('composes the advanced presentation for a settings file that still names the removed extended mode', () => {
+    // The document below is written the way a settings file from before the removal looks. It must
+    // still start, and it must select `advanced` — the mode that inherited the presentation — rather
+    // than failing validation or silently falling back to compatibility.
     const home = temporaryHome()
     writeFileSync(join(home, 'settings.yaml'), [
       'dsh-desktop:',
@@ -770,7 +773,7 @@ virtualStoreDirMaxLength: 60
     const rows = composeEntries([prepared.patches])
 
     expect(prepared).toEqual(expect.objectContaining({
-      mode: 'extended',
+      mode: 'advanced',
       macosMaterial: 'off',
       windowsMaterial: 'mica',
     }))
@@ -779,7 +782,7 @@ virtualStoreDirMaxLength: 60
     expect(rows.find(row => row.id === 'ui-conversation')?.disabled).toBe(false)
     expect(rows.find(row => row.id === 'desktop-shell')).toEqual(expect.objectContaining({
       config: expect.objectContaining({
-        mode: 'extended',
+        mode: 'advanced',
         macosMaterial: 'off',
         windowsMaterial: 'mica',
       }),
@@ -840,8 +843,11 @@ virtualStoreDirMaxLength: 60
     expect(() => desktopShellModeFromSettings([])).toThrow('must be a map')
     expect(() => desktopShellModeFromSettings({ 'dsh-desktop': true })).toThrow('settings must be a map')
     expect(() => desktopShellModeFromSettings({ 'dsh-desktop': { mode: 'glass' } })).toThrow(
-      'must be "compatibility", "extended", or "advanced"',
+      'must be "compatibility" or "advanced"',
     )
+    // The removed `extended` value is accepted rather than rejected: a settings file written before
+    // the removal has to keep starting, and it selects the mode that inherited the presentation.
+    expect(desktopShellModeFromSettings({ 'dsh-desktop': { mode: 'extended' } })).toBe('advanced')
     for (const port of [-1, 1.5, 65_536, '43189']) {
       expect(() => desktopStartupSettingsFromSettings({ 'dsh-desktop': { port } })).toThrow(
         'port must be an integer from 0 through 65535',

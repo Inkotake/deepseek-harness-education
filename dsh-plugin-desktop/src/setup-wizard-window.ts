@@ -7,6 +7,7 @@ import {
   auxiliaryWindowHasCustomFrame,
 } from './auxiliary-window-options.ts'
 import { revealApplication } from './electron-reveal.ts'
+import { storedDesktopShellMode } from './runtime.ts'
 import type { DesktopLocale } from './runtime.ts'
 import {
   desktopSetupWizardSelectionIsAvailable,
@@ -53,7 +54,7 @@ function exactBoolean(value: string | null): boolean | undefined {
 }
 
 function exactMode(value: string | null): DesktopSetupWizardMode | undefined {
-  return value === 'compatibility' || value === 'extended' || value === 'advanced' ? value : undefined
+  return storedDesktopShellMode(value)
 }
 
 function exactMacosMaterial(value: string | null): DesktopSetupWizardMacosMaterial | undefined {

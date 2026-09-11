@@ -280,15 +280,17 @@ describe('desktop Host plugin', () => {
       'dsh-desktop-version': '2.0.3',
       'dsh-desktop-material': 'off',
     })
+    // The framed mode is the one that publishes the 36px content boundary on Windows. The removed
+    // `extended` mode published it too, and the platform gate is covered by the Linux case below.
     expect(Object.fromEntries(new URL(desktopRendererUrl(
       43120,
-      'extended',
+      'compatibility',
       'win32',
       '2.0.3',
       'mica',
       22_631,
     )).searchParams)).toEqual({
-      'dsh-desktop-mode': 'extended',
+      'dsh-desktop-mode': 'compatibility',
       'dsh-desktop-platform': 'win32',
       'dsh-desktop-version': '2.0.3',
       'dsh-desktop-material': 'mica',
@@ -625,9 +627,6 @@ describe('desktop Host plugin', () => {
       logLevel: 'info',
     }
     expect(() => options?.validate?.({ ...settings, mode: 'advanced' })).toThrow(
-      'supported on macOS and Windows',
-    )
-    expect(() => options?.validate?.({ ...settings, mode: 'extended' })).toThrow(
       'supported on macOS and Windows',
     )
     expect(() => options?.validate?.({ ...settings, mode: 'compatibility' })).not.toThrow()

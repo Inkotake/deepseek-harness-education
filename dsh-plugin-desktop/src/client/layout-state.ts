@@ -36,9 +36,9 @@ export const DETAILS_MIN = 300
 export const DETAILS_MAX = 520
 export const CENTER_MIN = 640
 
-/** Keep the wider macOS rail private to enhanced mode; extended uses upstream geometry. */
+/** Keep the wider macOS rail private to advanced mode; the framed mode uses upstream geometry. */
 export function collapsedSidebarWidth(
-  mode: 'extended' | 'advanced',
+  mode: 'advanced',
   platform: 'darwin' | 'win32' | 'linux',
 ): number {
   return mode === 'advanced' && platform === 'darwin'

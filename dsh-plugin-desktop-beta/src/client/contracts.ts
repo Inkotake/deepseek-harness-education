@@ -40,7 +40,7 @@ export interface DesktopWindowDragRegion {
 export interface DesktopWindowService {
   /** Installed Desktop product version for this renderer generation. */
   readonly version: string
-  readonly mode: 'compatibility' | 'extended' | 'advanced'
+  readonly mode: 'compatibility' | 'advanced'
   readonly platform: 'darwin' | 'win32' | 'linux'
   /** Capability-gated native material active behind this renderer. */
   readonly material: 'off' | 'transparent' | 'mica'

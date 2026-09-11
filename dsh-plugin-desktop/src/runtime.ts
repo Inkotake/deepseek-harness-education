@@ -14,7 +14,34 @@ import type {
 export type DesktopPlatform = 'darwin' | 'win32' | 'linux'
 
 /** Native presentation modes selected by the desktop-shell Cordis row. */
-export type DesktopShellMode = 'compatibility' | 'extended' | 'advanced'
+export type DesktopShellMode = 'compatibility' | 'advanced'
+
+/**
+ * The shell mode a stored settings value selects.
+ *
+ * `extended` was a third presentation mode and is gone: it claimed the same layout contract that
+ * `advanced` now owns, so with both present one of them was always the wrong answer. A settings
+ * document written before the removal still says `extended`, so that value keeps parsing and
+ * selects `advanced`; `migrateDesktopShellModeSettings` rewrites the document so the alias is only
+ * ever a transitional read rather than a second source of truth.
+ * @param value - untrusted stored value.
+ * @returns the mode it selects, or `undefined` when nothing supports it.
+ */
+export function storedDesktopShellMode(value: unknown): DesktopShellMode | undefined {
+  if (value === 'compatibility' || value === 'advanced') return value
+  if (value === 'extended') return 'advanced'
+  return undefined
+}
+
+/**
+ * Persisted mode values, including the removed `extended` alias.
+ *
+ * Kept in the settings schema so a document written before the removal still validates and the
+ * application starts; `migrateDesktopShellModeSettings` rewrites it and {@link storedDesktopShellMode}
+ * maps it at every read. Dropping it from the schema instead would turn an old settings file into a
+ * startup failure — a far worse outcome than the mode merely existing.
+ */
+export type PersistedDesktopShellMode = DesktopShellMode | 'extended'
 
 /** Electron appearance source used by native frame and material rendering. */
 export type DesktopThemeSource = 'system' | 'light' | 'dark'

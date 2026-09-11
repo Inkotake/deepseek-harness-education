@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { claimDesktopLayout } from '../src/client/layout-service.ts'
 import { applyAdvancedShell } from '../src/client/advanced-shell.ts'
-import { applyExtendedShell } from '../src/client/extended-shell.ts'
 
 interface FakeStyleElement {
   id: string
@@ -159,49 +158,6 @@ describe('applyAdvancedShell presentation ownership', () => {
       ;(cleanup as () => void)()
       expect(dataset.dshDesktopMode).toBeUndefined()
       expect(dataset.dshDesktopPlatform).toBeUndefined()
-      expect(warn).toHaveBeenCalled()
-    } finally {
-      warn.mockRestore()
-    }
-  })
-})
-
-describe('applyExtendedShell presentation ownership', () => {
-  it('owns the extended presentation and frames it when the race is won', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      stubDocument()
-      const ctx = makeCtx()
-      ctx.reflect.provide.mockReturnValue(vi.fn())
-
-      applyExtendedShell(ctx as never, environmentFor('extended') as never)
-
-      // layout + owned styles + presenter + root slot + framed chrome styles
-      expect(ctx.effect).toHaveBeenCalledTimes(5)
-      expect(ctx.slots.register).toHaveBeenCalledTimes(1)
-      expect(warn).not.toHaveBeenCalled()
-    } finally {
-      warn.mockRestore()
-    }
-  })
-
-  it('keeps the framed chrome but drops the owned presentation when the race is lost', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      stubDocument()
-      const ctx = makeCtx()
-      ctx.reflect.provide.mockImplementation(() => {
-        throw new Error('service "layout" has been registered at <z5>')
-      })
-
-      applyExtendedShell(ctx as never, environmentFor('extended') as never)
-
-      // The failed ownership attempt is followed only by the framed-chrome
-      // style effect; no second root frame is stacked over the existing one.
-      expect(ctx.effect).toHaveBeenCalledTimes(2)
-      expect(ctx.effect.mock.results[0]?.type).toBe('throw')
-      expect(ctx.slots.register).not.toHaveBeenCalled()
-      expect(ctx.slots.inject).toHaveBeenCalledTimes(1)
       expect(warn).toHaveBeenCalled()
     } finally {
       warn.mockRestore()

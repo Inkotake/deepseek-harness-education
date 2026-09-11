@@ -6,7 +6,6 @@ import {
   compatibilityWindowOptions,
   DESKTOP_RENDERER_SESSION_PARTITION,
   desktopWindowOptions,
-  extendedWindowOptions,
 } from '../src/window-options.ts'
 import {
   ADVANCED_MACOS_TRAFFIC_LIGHT_TOP,
@@ -171,14 +170,17 @@ describe('compatibility BrowserWindow options', () => {
     expect(options).not.toHaveProperty('backgroundMaterial')
   })
 
-  it('uses the taller native caption and capability-gated material in extended mode', () => {
-    const extended = {
+  it('uses the taller native caption and capability-gated material in the framed mode', () => {
+    // The 36px command bar belonged to the removed `extended` mode and to `compatibility`, which
+    // both used the framed chrome. `compatibility` is the one that kept it, so the geometry
+    // assertions move here rather than disappearing with the mode.
+    const framed = {
       ...spec,
-      mode: 'extended' as const,
+      mode: 'compatibility' as const,
       material: 'off' as const,
       windowsBuild: 19_045,
     }
-    const options = extendedWindowOptions(extended, {} as NativeImage, 'win32', preload)
+    const options = compatibilityWindowOptions(framed, {} as NativeImage, 'win32', preload)
 
     expect(options).toEqual(expect.objectContaining({
       titleBarStyle: 'hidden',
@@ -188,12 +190,12 @@ describe('compatibility BrowserWindow options', () => {
     expect(options).not.toHaveProperty('transparent')
     expect(options).not.toHaveProperty('backgroundMaterial')
     expect(DESKTOP_FRAME_HEIGHT).toBe(36)
-    expect(desktopWindowOptions(extended, {} as NativeImage, 'win32', preload)).toEqual(options)
+    expect(desktopWindowOptions(framed, {} as NativeImage, 'win32', preload)).toEqual(options)
   })
 
-  it('centers macOS traffic lights in the 36px extended command bar', () => {
-    const options = extendedWindowOptions(
-      { ...spec, mode: 'extended', material: 'transparent' },
+  it('centers macOS traffic lights in the 36px framed command bar', () => {
+    const options = compatibilityWindowOptions(
+      { ...spec, mode: 'compatibility', material: 'transparent' },
       {} as NativeImage,
       'darwin',
       preload,

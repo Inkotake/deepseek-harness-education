@@ -18,7 +18,7 @@ import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import type { DesktopMarketProvider } from './desktop-market.ts'
 import type { DesktopNetworkExposure } from './desktop-network.ts'
 import type { DesktopNotificationSettings } from './notifications.ts'
-import type { DesktopShellMode } from './runtime.ts'
+import { storedDesktopShellMode, type DesktopShellMode } from './runtime.ts'
 
 const BIN_NAME = 'dsh-plugin-desktop'
 const STATE_VERSION = 1
@@ -100,8 +100,9 @@ function assertAbsolutePath(label: string, value: string): string {
 }
 
 function assertMode(value: unknown, error: ErrorFactory): DesktopShellMode {
-  if (value === 'compatibility' || value === 'extended' || value === 'advanced') return value
-  throw error('mode must be compatibility, extended, or advanced')
+  const mode = storedDesktopShellMode(value)
+  if (mode !== undefined) return mode
+  throw error('mode must be compatibility or advanced')
 }
 
 function assertExposure(value: unknown, error: ErrorFactory): DesktopNetworkExposure {

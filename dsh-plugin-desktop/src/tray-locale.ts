@@ -15,7 +15,6 @@ export type DesktopTrayLabelKey =
   | 'quit'
   | 'switchToAdvanced'
   | 'switchToCompatibility'
-  | 'switchToExtended'
   | 'installStable'
   | 'unavailableForDesktop'
   | 'updateAvailable'
@@ -34,7 +33,6 @@ const labels: Record<DesktopLocale, Record<DesktopTrayLabelKey, (value: string) 
     quit: () => 'Quit',
     switchToAdvanced: () => 'Switch to Enhanced Mode',
     switchToCompatibility: () => 'Switch to Compatibility Mode',
-    switchToExtended: () => 'Switch to Extended Window',
     installStable: () => 'Install Stable Edition…',
     unavailableForDesktop: profileName => `${profileName} (Unavailable for Desktop)`,
     updateAvailable: version => `DSH Desktop ${version} Available`,
@@ -52,7 +50,6 @@ const labels: Record<DesktopLocale, Record<DesktopTrayLabelKey, (value: string) 
     quit: () => '退出',
     switchToAdvanced: () => '切换到增强模式',
     switchToCompatibility: () => '切换到兼容模式',
-    switchToExtended: () => '切换到扩展窗口',
     installStable: () => '安装稳定版…',
     unavailableForDesktop: profileName => `${profileName}（不可用于桌面端）`,
     updateAvailable: version => `DSH Desktop ${version} 可用`,

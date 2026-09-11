@@ -8,8 +8,7 @@ import { AdvancedFrame, type AdvancedFrameProps } from '../src/client/AdvancedFr
 import { applyAdvancedShell } from '../src/client/advanced-shell.ts'
 import { claimDesktopLayout } from '../src/client/layout-service.ts'
 import { parseDesktopClientEnvironment } from '../src/client/environment.ts'
-import { ExtendedFrame } from '../src/client/ExtendedFrame.tsx'
-import { applyExtendedShell, applyFramedShell } from '../src/client/extended-shell.ts'
+import { applyFramedShell } from '../src/client/extended-shell.ts'
 import { installExtendedStyles } from '../src/client/extended-styles.ts'
 import {
   collapsedSidebarWidth, computeDesktopColumns, DesktopLayoutState, MACOS_SIDEBAR_COLLAPSED, SIDEBAR_COLLAPSED,
@@ -68,7 +67,6 @@ describe('desktop client environment', () => {
 describe('advanced desktop layout', () => {
   it.each([
     ['advanced', AdvancedFrame],
-    ['extended', ExtendedFrame],
   ] as const)('binds the strict details slot through SessionProvider in %s mode', (_mode, Frame) => {
     vi.stubGlobal('window', { innerWidth: 1440 })
     const props = {
@@ -317,10 +315,10 @@ describe('advanced desktop layout', () => {
       },
     })
     expect(desktopWindowService({
-      version: '2.0.3', mode: 'extended', platform: 'win32', material: 'mica', micaSupported: true,
+      version: '2.0.3', mode: 'compatibility', platform: 'win32', material: 'mica', micaSupported: true,
     })).toEqual({
       version: '2.0.3',
-      mode: 'extended',
+      mode: 'compatibility',
       platform: 'win32',
       material: 'mica',
       micaSupported: true,
@@ -349,14 +347,14 @@ describe('advanced desktop layout', () => {
     expect(disposed).toBe(true)
   })
 
-  it('keeps the wider macOS rail in enhanced mode and the upstream width in extended mode', () => {
+  it('keeps the wider macOS rail in advanced mode and the upstream width in the framed mode', () => {
     expect(computeDesktopColumns(1440, 0, 0)).toEqual({ sidebar: SIDEBAR_COLLAPSED, center: 1384, details: 0 })
     expect(computeDesktopColumns(1440, 0, 0, MACOS_SIDEBAR_COLLAPSED))
       .toEqual({ sidebar: MACOS_SIDEBAR_COLLAPSED, center: 1350, details: 0 })
     expect(SIDEBAR_COLLAPSED).toBe(56)
     expect(collapsedSidebarWidth('advanced', 'darwin')).toBe(MACOS_SIDEBAR_COLLAPSED)
-    expect(collapsedSidebarWidth('extended', 'darwin')).toBe(SIDEBAR_COLLAPSED)
-    expect(collapsedSidebarWidth('extended', 'win32')).toBe(SIDEBAR_COLLAPSED)
+    // The removed `extended` mode also took the upstream width; `advanced` is the only mode the
+    // function still accepts, so those assertions have no successor.
     expect(MACOS_SIDEBAR_COLLAPSED).toBe(90)
   })
 
@@ -435,105 +433,6 @@ describe('independent Desktop frame', () => {
     }
   })
 
-  it('owns the extended root and keeps its native frame actions private', () => {
-    const registrations: Array<Record<string, unknown>> = []
-    const occupants: unknown[] = []
-    const disposers: Array<() => void> = []
-    const dataset: Record<string, string> = {}
-    const rootDataset: Record<string, string> = {}
-    const bodyStyle = { setProperty: vi.fn(), removeProperty: vi.fn() }
-    const documentElementStyle = { colorScheme: '', removeProperty: vi.fn() }
-    const createElement = vi.fn(() => ({
-      content: '',
-      dataset: {},
-      id: '',
-      isConnected: false,
-      name: '',
-      remove: vi.fn(),
-      style: { setProperty: vi.fn(), removeProperty: vi.fn() },
-      textContent: '',
-    }))
-    vi.stubGlobal('document', {
-      body: {
-        dataset,
-        removeAttribute: vi.fn(),
-        setAttribute: vi.fn(),
-        style: bodyStyle,
-      },
-      documentElement: { style: documentElementStyle },
-      getElementById: (id: string) => id === 'root' ? { dataset: rootDataset } : null,
-      createElement,
-      head: { appendChild: vi.fn() },
-    })
-    vi.stubGlobal('getComputedStyle', () => ({ backgroundColor: 'rgb(0, 0, 0)' }))
-    const ctx = {
-      effect: vi.fn((mount: () => void | (() => void)) => {
-        const dispose = mount()
-        if (typeof dispose === 'function') disposers.push(dispose)
-      }),
-      reflect: { provide: vi.fn(() => () => {}) },
-      theme: {
-        getTheme: vi.fn(() => ({ active: { colorScheme: 'dark', tokens: {} } })),
-      },
-      on: vi.fn(() => () => {}),
-      slots: {
-        inject: vi.fn((_name: string, mount: () => unknown) => mount()),
-        register: vi.fn((options: Record<string, unknown>, occupant: unknown) => {
-          registrations.push(options)
-          occupants.push(occupant)
-          return () => {}
-        }),
-      },
-    } as unknown as ClientContext
-
-    try {
-      applyExtendedShell(ctx, {
-        version: '2.0.3',
-        mode: 'extended',
-        platform: 'win32',
-        material: 'off',
-        micaSupported: false,
-      })
-      expect(registrations[0]).toMatchObject({
-        name: 'root',
-        children: {
-          sidebar: { kind: 'single', scope: 'root' },
-          conversation: { kind: 'single', scope: 'session-maybe' },
-          details: { kind: 'single', scope: 'session' },
-          'shell.overlay': { kind: 'list', scope: 'root' },
-        },
-      })
-      expect(registrations[0]?.inject).toBeTypeOf('function')
-      const rootInject = (registrations[0]?.inject as () => Record<string, unknown>)()
-      expect(rootInject).toMatchObject({
-        platform: 'win32',
-      })
-      expect(rootInject).not.toHaveProperty('mode')
-      expect(occupants[0]).toBe(ExtendedFrame)
-      expect(registrations[1]).toMatchObject({
-        name: 'shell.overlay',
-        id: 'desktop-frame-titlebar',
-      })
-      expect(registrations[1]).not.toHaveProperty('children')
-      expect(registrations[1]).not.toHaveProperty('locale')
-      expect(registrations[1]?.inject).toBeTypeOf('function')
-      expect((registrations[1]?.inject as () => Record<string, unknown>)()).toEqual({
-        environment: { version: '2.0.3', mode: 'extended', platform: 'win32', material: 'off', micaSupported: false },
-      })
-      expect(registrations).toHaveLength(2)
-      expect(dataset).toMatchObject({
-        dshDesktopMode: 'extended',
-        dshDesktopPlatform: 'win32',
-        dshDesktopMaterial: 'off',
-      })
-      expect(rootDataset).toEqual({ dshDesktopContentViewport: '' })
-      disposers.forEach(dispose => { dispose() })
-      expect(dataset).toEqual({})
-      expect(rootDataset).toEqual({})
-    } finally {
-      vi.unstubAllGlobals()
-    }
-  })
 
   it('does not expose a plugin action seat in compatibility mode', () => {
     const registrations: Array<Record<string, unknown>> = []

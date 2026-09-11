@@ -1,5 +1,5 @@
 /** Desktop renderer modes accepted from the Electron-owned page URL. */
-export type DesktopClientMode = 'compatibility' | 'extended' | 'advanced'
+export type DesktopClientMode = 'compatibility' | 'advanced'
 
 /** Host platforms whose native chrome has a desktop presentation. */
 export type DesktopClientPlatform = 'darwin' | 'win32' | 'linux'
@@ -21,7 +21,10 @@ export interface DesktopClientEnvironment {
   micaSupported: boolean
 }
 
-const MODES = new Set<DesktopClientMode>(['compatibility', 'extended', 'advanced'])
+// `extended` is a removed mode. An old Host marker is still accepted here and selects `advanced`,
+// the mode that now owns the same presentation, rather than turning a stale query string into a
+// startup error — the same treatment the removed Acrylic material gets at line 52.
+const MODES = new Set<string>(['compatibility', 'extended', 'advanced'])
 const PLATFORMS = new Set<DesktopClientPlatform>(['darwin', 'win32', 'linux'])
 const MATERIAL_MARKERS = new Set(['off', 'transparent', 'acrylic', 'mica'])
 const VERSION_PATTERN = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u
@@ -38,9 +41,11 @@ export function parseDesktopClientEnvironment(search: string): DesktopClientEnvi
   const materialMarker = params.get('dsh-desktop-material')
   const version = params.get('dsh-desktop-version')
   if (mode === null && platform === null) return undefined
-  if (!MODES.has(mode as DesktopClientMode)) {
+  if (!MODES.has(mode ?? '')) {
     throw new Error(`dsh-plugin-desktop: invalid or missing dsh-desktop-mode ${JSON.stringify(mode)}`)
   }
+  // Accept the removed `extended` marker without reintroducing it as a mode of its own.
+  const shellMode: DesktopClientMode = mode === 'extended' ? 'advanced' : mode as DesktopClientMode
   if (!PLATFORMS.has(platform as DesktopClientPlatform)) {
     throw new Error(`dsh-plugin-desktop: invalid or missing dsh-desktop-platform ${JSON.stringify(platform)}`)
   }
@@ -70,7 +75,7 @@ export function parseDesktopClientEnvironment(search: string): DesktopClientEnvi
   }
   return {
     version,
-    mode: mode as DesktopClientMode,
+    mode: shellMode,
     platform: platform as DesktopClientPlatform,
     material,
     micaSupported,

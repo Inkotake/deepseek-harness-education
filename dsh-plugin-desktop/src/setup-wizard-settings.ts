@@ -5,6 +5,7 @@ import {
   desktopBrowserAccessEnabled,
   desktopNetworkExposureForBrowserAccess,
 } from './desktop-network.ts'
+import { storedDesktopShellMode } from './runtime.ts'
 import {
   closeSync,
   constants,
@@ -169,8 +170,9 @@ function optionalBoolean(values: Record<string, unknown>, key: string, fallback:
 
 function parseMode(value: unknown): DesktopSetupWizardMode {
   if (value === undefined) return 'compatibility'
-  if (value === 'compatibility' || value === 'extended' || value === 'advanced') return value
-  throw invalid('dsh-desktop.mode must be compatibility, extended, or advanced')
+  const mode = storedDesktopShellMode(value)
+  if (mode !== undefined) return mode
+  throw invalid('dsh-desktop.mode must be compatibility or advanced')
 }
 
 function parseExposure(value: unknown): DesktopSetupWizardNetworkExposure {
@@ -444,6 +446,51 @@ export async function migrateDesktopWindowMaterialSettings(
   } else {
     const root = structuredClone(loaded.root)
     const desktop = { ...section(root, DESKTOP_NAMESPACE), windowsMaterial: 'off' }
+    root[DESKTOP_NAMESPACE] = desktop
+    output = `${JSON.stringify(root, undefined, 2)}\n`
+  }
+  await writeFileAtomic(path, output, {
+    mode: DOCUMENT_FILE_MODE,
+    dirMode: DOCUMENT_DIRECTORY_MODE,
+  })
+  return true
+}
+
+/**
+ * Rewrite the removed `extended` shell mode to `advanced`, which inherited its presentation.
+ *
+ * The read path already maps the old value, so a read-only document stays safe even when this
+ * durable migration cannot run. Writing it back matters for the other direction: without it, a
+ * settings file keeps naming a mode that no longer exists, every later read takes the alias branch,
+ * and nothing that inspects the raw document can tell a migrated installation from an unmigrated
+ * one.
+ * @param documentPath - the Desktop settings document to migrate in place.
+ * @returns whether the durable document changed.
+ */
+export async function migrateDesktopShellModeSettings(
+  documentPath: string,
+): Promise<boolean> {
+  const path = settingsPath(documentPath)
+
+  const needsMigration = (loaded: LoadedSettingsDocument): boolean => {
+    // Validate every known Wizard-owned value before changing the legacy leaf.
+    projectSettings(loaded.root)
+    return section(loaded.root, DESKTOP_NAMESPACE).mode === 'extended'
+  }
+
+  if (!needsMigration(loadSettingsDocument(path))) return false
+
+  ensureDocumentDirectory(path)
+  const loaded = loadSettingsDocument(path)
+  if (!needsMigration(loaded)) return false
+
+  let output: string
+  if (loaded.format === 'yaml') {
+    loaded.yaml!.setIn([DESKTOP_NAMESPACE, 'mode'], 'advanced')
+    output = loaded.yaml!.toString()
+  } else {
+    const root = structuredClone(loaded.root)
+    const desktop = { ...section(root, DESKTOP_NAMESPACE), mode: 'advanced' }
     root[DESKTOP_NAMESPACE] = desktop
     output = `${JSON.stringify(root, undefined, 2)}\n`
   }

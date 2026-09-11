@@ -1,7 +1,7 @@
 /** Data contract shared by the isolated native Setup Wizard and its owner. */
 
 export type DesktopSetupWizardPlatform = 'darwin' | 'win32' | 'linux'
-export type DesktopSetupWizardMode = 'compatibility' | 'extended' | 'advanced'
+export type DesktopSetupWizardMode = 'compatibility' | 'advanced'
 export type DesktopSetupWizardMacosMaterial = 'off' | 'transparent'
 export type DesktopSetupWizardWindowsMaterial = 'off' | 'mica'
 export type DesktopSetupWizardNetworkExposure = 'loopback' | 'lan'

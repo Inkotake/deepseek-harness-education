@@ -897,7 +897,10 @@ function stepSkills() {
   emptyDir(skillsRoot)
   // DSH discovers bundled skills as `<root>/<skill-name>/SKILL.md` (or flat `<root>/<name>.md`),
   // so the shipped tree must be flat and name-unique rather than grouped by vendor.
-  const own = ['teaching-aid', 'publish-static', 'latex-authoring', 'teacher-grabme']
+  const own = [
+    'teaching-aid', 'publish-static', 'latex-authoring', 'teacher-grabme',
+    'lesson-design', 'ppt-design', 'assessment-design',
+  ]
   const installed = new Map()
   for (const skill of own) {
     const from = path.join(TEACHER, 'skills', skill)

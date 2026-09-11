@@ -144,7 +144,10 @@ function main() {
       .filter(entry => entry.isDirectory() && fs.existsSync(path.join(skillsRoot, entry.name, 'SKILL.md')))
       .map(entry => entry.name)
       .sort()
-    const required = ['teaching-aid', 'publish-static', 'latex-authoring', 'teacher-grabme']
+    const required = [
+      'teaching-aid', 'publish-static', 'latex-authoring', 'teacher-grabme',
+      'lesson-design', 'ppt-design', 'assessment-design',
+    ]
     const missing = required.filter(name => !skills.includes(name))
     record('bundled-skills', missing.length === 0, `${skills.length} skills: ${skills.join(', ')}`)
     if (missing.length > 0) record('bundled-skills-required', false, `missing: ${missing.join(', ')}`)

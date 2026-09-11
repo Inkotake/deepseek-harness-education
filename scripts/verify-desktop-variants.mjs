@@ -25,6 +25,10 @@ const allowedDifferences = new Set([
   'profile.ts',
   'safe-mode.ts',
   'setup-wizard-contract.ts',
+  // Stable-only Teacher DSH distribution sources: the beta channel ships no bundled teacher
+  // runtime, and `main.ts` (already declared above) is the only consumer of both modules.
+  'teacher-bootstrap.ts',
+  'teacher-profile-seed.ts',
   'updates.ts',
   'webserver.ts',
 ])

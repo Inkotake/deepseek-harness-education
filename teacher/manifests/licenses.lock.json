@@ -1,7 +1,7 @@
 {
   "name": "teacher-licenses.lock",
   "version": "0.1.0",
-  "generatedAt": "2026-09-10T14:03:43.449Z",
+  "generatedAt": "2026-09-11T03:50:19.359Z",
   "policy": "Every component shipped in the installer must appear here with a license. CC BY-SA 4.0 components keep their attribution and license text.",
   "curated": [
     {

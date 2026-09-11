@@ -148,8 +148,17 @@ function main() {
     }
   }
 
+  // A credential embedded in a remote URL is a local convenience, not a publishable secret, so
+  // this is a warning rather than a failure: `.git/config` is never tracked or pushed. It is
+  // reported because `git remote -v` output, terminal logs, and screenshots all expose it.
+  const remoteWarnings = credentialRemoteWarnings()
+
   if (JSON_OUTPUT) {
-    process.stdout.write(`${JSON.stringify({ scanned, findings }, null, 2)}\n`)
+    process.stdout.write(`${JSON.stringify({ scanned, findings, remoteWarnings }, null, 2)}\n`)
+  }
+
+  for (const warning of remoteWarnings) {
+    process.stderr.write(`[verify-no-secrets] WARN ${warning}\n`)
   }
 
   if (findings.length > 0) {
@@ -170,6 +179,34 @@ function main() {
 function redact(value) {
   const trimmed = value.length > 12 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value
   return `${trimmed} (${String(value.length)} chars)`
+}
+
+/**
+ * Report, without failing, any git remote whose URL embeds a credential.
+ *
+ * `.git/config` is never part of the tracked tree, so a token stored there cannot reach GitHub.
+ * It is still worth surfacing, because `git remote -v`, CI logs, terminal scrollback, and
+ * screenshots all render the URL in full.
+ */
+function credentialRemoteWarnings() {
+  let config
+  try {
+    config = fs.readFileSync(path.join(ROOT, '.git', 'config'), 'utf8')
+  } catch {
+    return []
+  }
+  const warnings = []
+  for (const match of config.matchAll(/url\s*=\s*(\S+)/gu)) {
+    const url = match[1]
+    const credential = /^https?:\/\/[^/@\s]*:[^/@\s]+@/u.exec(url)
+    if (credential === null) continue
+    const safe = `${url.slice(0, url.indexOf('@') + 1).replace(credential[0], `${credential[0].split(':')[0]}:***@`)}${url.slice(url.indexOf('@') + 1)}`
+    warnings.push(
+      `a git remote URL embeds a credential and will be shown by \`git remote -v\`: ${safe}`
+      + ' - this is local-only and is never pushed, but rotate the token if it was ever shared.',
+    )
+  }
+  return warnings
 }
 
 main()

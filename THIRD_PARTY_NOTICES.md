@@ -4,7 +4,7 @@ Teacher DSH is a redistribution that bundles the components below. Each componen
 
 Verbatim license texts are collected in [`licenses/`](./licenses).
 
-Generated: 2026-09-10T14:03:43.449Z
+Generated: 2026-09-11T03:50:19.359Z
 
 ## Bundled components
 

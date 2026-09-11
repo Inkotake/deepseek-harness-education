@@ -75,7 +75,7 @@ const CURATED = [
     version: 'pinned commit',
     license: 'MIT',
     source: 'https://github.com/openHacking/pptkit-presentation',
-    role: 'Vendored presentation workflow Skill and the PPTKit DSH plugin',
+    role: 'Vendored presentation workflow Skill',
   },
   {
     name: 'Vercel Web Design Guidelines',
@@ -93,7 +93,7 @@ const CURATED = [
   },
   {
     name: 'DSH Better Sidebar',
-    version: '0.18.1',
+    version: '0.19.0',
     license: 'MIT',
     source: 'https://github.com/omdsh-dev/DSH-better-sidebar',
     role: 'Explorer / editor / terminal / git / browser sidebar',

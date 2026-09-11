@@ -159,12 +159,16 @@ function main() {
       const profileDir = path.join(teacherRuntime, 'seed', 'dsh-home', 'profiles', 'desktop')
       const manifest = JSON.parse(fs.readFileSync(path.join(profileDir, 'package.json'), 'utf8'))
       const bundles = manifest.dsh?.profile?.bundles ?? []
-      const vendorExpected = ['dsh-better-sidebar', '@dsh-cowork/plugin', 'dsh-plugin-pptkit-presentation']
+      // Read the expectation from the seed's own manifest rather than a second hardcoded list. A
+      // plugin added or retired in the builder must not need this smoke edited in lockstep, and the
+      // two drifting apart is exactly what this check exists to catch. An empty field fails rather
+      // than passing vacuously.
+      const vendorExpected = Array.isArray(seed.vendorPlugins) ? seed.vendorPlugins : []
       const present = vendorExpected.filter(name => fs.existsSync(path.join(profileDir, 'node_modules', ...name.split('/'))))
       record('profile-seed-bundles', bundles.includes('@deepseek-ai/dsh-web-app'), `${bundles.length} bundles`)
       record(
         'profile-seed-vendor-plugins',
-        present.length === vendorExpected.length,
+        vendorExpected.length > 0 && present.length === vendorExpected.length,
         `${present.length}/${vendorExpected.length}: ${present.join(', ')}`,
       )
       record('profile-seed-manifest', Array.isArray(seed.vendorPlugins), seed.builtAt ?? '')

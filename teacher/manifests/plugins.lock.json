@@ -6,20 +6,13 @@
       "id": "dsh-better-sidebar",
       "repo": "https://github.com/omdsh-dev/DSH-better-sidebar",
       "license": "MIT",
-      "compatibility": "DSH 0.1.2-rc.1+",
+      "compatibility": "DSH 0.1.5-rc.1+",
       "install": "local-tgz",
       "note": "node-pty build scripts must be pre-approved during seed build"
     },
     {
       "id": "dsh-cowork",
       "repo": "https://github.com/Jesse-njx/dsh-cowork",
-      "license": "MIT",
-      "compatibility": "DSH 0.1.2-rc.1+",
-      "install": "local-tgz"
-    },
-    {
-      "id": "pptkit-presentation",
-      "repo": "https://github.com/openHacking/pptkit-presentation",
       "license": "MIT",
       "compatibility": "DSH 0.1.2-rc.1+",
       "install": "local-tgz"

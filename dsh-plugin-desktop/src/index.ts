@@ -19,7 +19,6 @@ import {
   handleRendererBootRequest,
   RENDERER_BOOT_REPORT_PATH,
 } from './renderer-boot.ts'
-import { applyCommandDescriptionCopy } from './command-description-overrides.ts'
 import {
   DESKTOP_DIRECTORY_PICKER_PATH,
   DESKTOP_DIRECTORY_VALIDATOR_PATH,
@@ -214,10 +213,6 @@ export function desktopRendererUrl(
  * @param config - validated native window values.
  */
 export function apply(ctx: Context, config: Config): void {
-  // Presentation copy, not a launcher capability: the command panel is localized in
-  // every boot that composes this plugin, and the override is inert when the command
-  // registry is absent.
-  applyCommandDescriptionCopy(ctx)
   const runtime = ctx.get('desktopRuntime')
   if (runtime === undefined) {
     process.stderr.write(

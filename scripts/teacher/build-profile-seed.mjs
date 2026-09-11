@@ -28,11 +28,16 @@ const SEED = path.join(TEACHER_RUNTIME, 'seed', 'dsh-home')
 const PLUGINS_BUILT = path.join(ROOT, 'resources', 'teacher-seed', 'plugins-built')
 const INSPECT = process.argv.includes('--inspect')
 
-/** Package names, in mount order, with the directory that provides each one. */
+/**
+ * Package names, in mount order, with the directory that provides each one.
+ *
+ * `dsh-plugin-pptkit-presentation` is deliberately absent. It registered a second provider for a
+ * skill this distribution already bundles through `DSH_BUNDLED_SKILL_DIR`, and the two copies are
+ * byte-identical (33 files, same SHA-256), so mounting it only duplicated the catalog entry.
+ */
 const VENDOR_PLUGINS = [
   { packageName: 'dsh-better-sidebar', source: 'dsh-better-sidebar' },
-  { packageName: '@dsh-cowork/plugin', source: 'dsh-cowork' },
-  { packageName: 'dsh-plugin-pptkit-presentation', source: 'pptkit-presentation' }
+  { packageName: '@dsh-cowork/plugin', source: 'dsh-cowork' }
 ]
 
 function log(message) {

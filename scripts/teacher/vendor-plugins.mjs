@@ -10,8 +10,7 @@ fs.mkdirSync(seedDir, { recursive: true });
 
 const plugins = [
   { id: 'dsh-better-sidebar', repo: 'https://github.com/omdsh-dev/DSH-better-sidebar.git', license: 'MIT' },
-  { id: 'dsh-cowork', repo: 'https://github.com/Jesse-njx/dsh-cowork.git', license: 'MIT' },
-  { id: 'pptkit-presentation', repo: 'https://github.com/openHacking/pptkit-presentation.git', license: 'MIT' }
+  { id: 'dsh-cowork', repo: 'https://github.com/Jesse-njx/dsh-cowork.git', license: 'MIT' }
 ];
 
 function git(args, cwd) {

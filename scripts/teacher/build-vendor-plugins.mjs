@@ -69,7 +69,6 @@ Usage:
 Producers:
   ${SIDEBAR_ID}   npm pack ${SIDEBAR_SPEC}, extracted and installed as published
   dsh-cowork           source build from resources/teacher-seed/plugins/dsh-cowork
-  pptkit-presentation  source build from resources/teacher-seed/plugins/pptkit-presentation
 
 Options:
   --only=<id>[,<id>]  Build only the listed producers.
@@ -391,50 +390,9 @@ PRODUCERS.set('dsh-cowork', {
   },
 })
 
-PRODUCERS.set('pptkit-presentation', {
-  id: 'pptkit-presentation',
-  expected() {
-    const meta = vendoredSource('pptkit-presentation')
-    const version = packageVersion(
-      path.join(SEED_PLUGINS, 'pptkit-presentation', 'packages', 'dsh-plugin-pptkit-presentation'),
-    )
-    return { version, license: 'MIT', source: meta.commit }
-  },
-  build({ scratch, out, stores }) {
-    const src = copyCheckout('pptkit-presentation', scratch)
-
-    runPnpm([
-      'install',
-      '--filter', 'pptkit-presentation',
-      '--filter', 'dsh-plugin-pptkit-presentation',
-      '--store-dir', stores,
-      '--ignore-scripts',
-      '--reporter=append-only',
-    ], src)
-    // Exactly: node scripts/sync-skill.mjs && tsc -p tsconfig.json
-    runPnpm(['--filter', 'dsh-plugin-pptkit-presentation', 'run', 'build'], src)
-
-    const packageDir = path.join(src, 'packages', 'dsh-plugin-pptkit-presentation')
-    copyEntries(out, packageDir, ['package.json', 'dist', 'cordis.patch.yml', 'skill'])
-    if (copyLicense(out, path.join(packageDir, 'LICENSE'), path.join(src, 'LICENSE')) === null) {
-      throw new Error('no LICENSE found for pptkit-presentation')
-    }
-
-    const manifest = readJson(path.join(out, 'package.json'))
-    if (manifest === null) throw new Error('assembled pptkit package.json is not valid JSON')
-    delete manifest.devDependencies
-    // A `prepare`/`prepack` script would fire on any later `npm install` in the shipped tree and
-    // demand a build step (`tsc`, `scripts/sync-skill.mjs`) that does not exist there. `build`,
-    // `test`, and `typecheck` stay for provenance.
-    if (manifest.scripts !== undefined && manifest.scripts !== null) {
-      delete manifest.scripts.prepare
-      delete manifest.scripts.prepack
-    }
-    writeJson(path.join(out, 'package.json'), manifest)
-
-    runNpm(['install', '--omit=dev', '--no-audit', '--no-fund', '--legacy-peer-deps'], out)
-  },
-})
+// The pptkit-presentation producer is gone with the plugin. Its skill is already shipped as a
+// bundled Teacher Skill (`build-teacher-runtime.mjs` copies `vendor-skills/pptkit-presentation`),
+// and the plugin registered a second, byte-identical provider for the same name.
 
 // ---------------------------------------------------------------------------
 // Driver

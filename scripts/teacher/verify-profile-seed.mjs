@@ -36,7 +36,6 @@ const BIN_NAME = 'dsh-plugin-desktop-teacher-seed-verify'
 const VENDOR_PLUGINS = [
   'dsh-better-sidebar',
   '@dsh-cowork/plugin',
-  'dsh-plugin-pptkit-presentation',
 ]
 
 const AS_JSON = process.argv.includes('--json')
@@ -399,21 +398,24 @@ async function checkVendorEffects(report, ctx) {
 
   const skills = ctx.get('skills')
   if (skills === undefined) {
-    report.observe('effect: PPTKit registers its skill provider', 'unobservable', 'no skills service in this profile')
+    report.observe('effect: the bundled PPTKit Skill is listed', 'unobservable', 'no skills service in this profile')
   } else {
     try {
       const listed = await skills.list()
       const ids = listed.map(skill => skill.id ?? skill.name)
       const found = ids.filter(id => typeof id === 'string' && /pptkit/iu.test(id))
+      // The Skill comes from the bundled Teacher Skill directory through `dsh-skill-filesystem`, not
+      // from a plugin: the pptkit-presentation plugin that used to register a second provider for this
+      // same name is not mounted anymore.
       report.observe(
-        'effect: PPTKit registers its skill provider',
+        'effect: the bundled PPTKit Skill is listed',
         found.length > 0 ? 'observed' : 'missing',
         found.length > 0
           ? `skill catalog entry: ${found.join(', ')}`
           : `skill catalog has no pptkit entry: ${ids.join(', ') || '(empty)'}`,
       )
     } catch (cause) {
-      report.observe('effect: PPTKit registers its skill provider', 'unobservable', describeError(cause))
+      report.observe('effect: the bundled PPTKit Skill is listed', 'unobservable', describeError(cause))
     }
   }
 }

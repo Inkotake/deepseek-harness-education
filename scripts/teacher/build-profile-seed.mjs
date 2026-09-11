@@ -40,6 +40,29 @@ const VENDOR_PLUGINS = [
   { packageName: '@dsh-cowork/plugin', source: 'dsh-cowork' }
 ]
 
+/**
+ * The desktop-authored Host plugin the shipped profile has to be able to resolve.
+ *
+ * `@teacher-dsh/global-memory` is mounted by the desktop-owned Host layer
+ * (`dsh-plugin-desktop/cordis.patch.yml`) rather than by a bundle layer, because the design
+ * requires ONE shared memory service for every preset and a bundle or preset `isolate` realm
+ * would give each preset its own. A row the Host mounts by package name still has to be
+ * resolvable from the profile, so its built runtime tree — placed in
+ * `resources/teacher-runtime/global-memory/` by `build-teacher-runtime.mjs` — is installed into
+ * `profiles/desktop/node_modules` here, exactly where a bundle layer's packages are linked.
+ *
+ * It is deliberately NOT appended to `dsh.profile.bundles`: a bundle layer would contribute its
+ * `dsh.bundle.patch` as a second mount of the same runtime, and the two mounts would collide on
+ * the one `global-memory` row id the desktop patch already inserts.
+ */
+const HOST_RUNTIME_PLUGINS = [
+  {
+    packageName: '@teacher-dsh/global-memory',
+    source: path.join(TEACHER_RUNTIME, 'global-memory'),
+    role: 'shared long-term memory service (Host plane, mounted by dsh-plugin-desktop/cordis.patch.yml)'
+  }
+]
+
 function log(message) {
   process.stdout.write(`[profile-seed] ${message}\n`)
 }
@@ -293,7 +316,43 @@ async function main() {
   }
 
   // Reconcile `dsh.profile.bundles`: launcher bundles first, then vendor plugins in pin order.
+  // `HOST_RUNTIME_PLUGINS` are deliberately absent: they are mounted by the Host layer, not by a
+  // bundle layer (see the constant's own note).
   const bundles = [...requiredBundles.filter((name) => !installed.includes(name)), ...installed]
+
+  // Install the built Host-plane runtime trees beside the vendor plugins. These are not profile
+  // bundles; they only have to resolve from the profile's node_modules so the desktop-owned Host
+  // layer can mount them by package name.
+  const hostRuntimePlugins = []
+  for (const plugin of HOST_RUNTIME_PLUGINS) {
+    if (!fs.existsSync(plugin.source)) {
+      throw new Error(
+        `Host runtime package missing: ${plugin.source}; `
+        + 'run "node scripts/teacher/build-teacher-runtime.mjs" first'
+      )
+    }
+    if (bundles.includes(plugin.packageName)) {
+      throw new Error(`${plugin.packageName} is a Host-mounted runtime and must not be a profile bundle`)
+    }
+    const target = path.join(nodeModules, ...plugin.packageName.split('/'))
+    fs.rmSync(target, { recursive: true, force: true })
+    fs.cpSync(plugin.source, target, { recursive: true, dereference: true })
+    prunePluginTree(target)
+    const entry = readJson(path.join(target, 'package.json'))
+    const main = path.join(target, entry.main ?? 'index.js')
+    if (!fs.existsSync(main)) {
+      throw new Error(`${plugin.packageName} main entry does not exist: ${main}`)
+    }
+    if (entry.dsh?.bundle !== undefined) {
+      throw new Error(
+        `${plugin.packageName} must not declare dsh.bundle: it is mounted by the Host layer, `
+        + 'and a bundle layer would mount the same row a second time'
+      )
+    }
+    hostRuntimePlugins.push(plugin.packageName)
+    log(`installed ${plugin.packageName}@${entry.version} (${plugin.role})`)
+  }
+
   fs.writeFileSync(profileManifestPath, `${JSON.stringify({
     ...manifest,
     dsh: {

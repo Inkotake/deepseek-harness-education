@@ -5,7 +5,7 @@
  * Output (consumed by electron-builder `extraResources`):
  *
  *   resources/dsh-runtime/{node,pnpm,dsh,node_modules}
- *   resources/teacher-runtime/{cli,artifact,ppt,deploy,skills,plugins,bin,manifests}
+ *   resources/teacher-runtime/{cli,artifact,ppt,deploy,global-memory,skills,plugins,bin,manifests}
  *
  * Every step is idempotent and can be selected with `--only=`/`--skip=`.
  *
@@ -864,6 +864,98 @@ function stepDeploy() {
 }
 
 /**
+ * Build `@teacher-dsh/global-memory` when one of its sources is newer than the emitted entry.
+ *
+ * The package's own `node_modules` carries the TypeScript release its `devDependencies` pin, so
+ * the compile runs through that binary rather than through a package manager: this script is
+ * already invoked by `teacher.cmd` with no package manager on PATH. `--force` on the runtime
+ * build skips the timestamp check.
+ */
+function buildGlobalMemoryIfStale(packageDir, entry) {
+  const sources = ['schema.ts', ...fs.readdirSync(path.join(packageDir, 'src'))
+    .filter(name => name.endsWith('.ts'))
+    .map(name => path.join('src', name))]
+  const entryTime = fs.existsSync(entry) ? fs.statSync(entry).mtimeMs : -1
+  let stale = entryTime < 0
+  for (const source of sources) {
+    if (fs.statSync(path.join(packageDir, source)).mtimeMs > entryTime) {
+      stale = true
+      break
+    }
+  }
+  if (!stale && !args.includes('--force')) {
+    log('global-memory: build is up to date')
+    return
+  }
+  const manifest = readJson(path.join(packageDir, 'package.json'))
+  const buildScript = manifest.scripts?.build
+  if (typeof buildScript !== 'string' || buildScript.length === 0) {
+    throw new Error('@teacher-dsh/global-memory declares no "build" script')
+  }
+  const compiler = path.join(packageDir, 'node_modules', 'typescript', 'bin', 'tsc')
+  if (!fs.existsSync(compiler)) {
+    throw new Error(
+      `TypeScript is not installed for @teacher-dsh/global-memory (${compiler}); `
+      + 'run "corepack pnpm install" in teacher/ first',
+    )
+  }
+  fs.rmSync(path.join(packageDir, 'lib'), { recursive: true, force: true })
+  run(process.execPath, [compiler, '-p', 'tsconfig.build.json'], { cwd: packageDir })
+}
+
+/**
+ * Bundle the shared long-term memory service as an installable runtime package.
+ *
+ * `@teacher-dsh/global-memory` is the Host-plane plugin the desktop-owned layer mounts by
+ * package name, so the profile resolver has to find real JavaScript under
+ * `teacher-runtime/global-memory/`. The package follows the source-first convention used by
+ * `@teacher-dsh/ppt-kit`, so this step compiles it and copies the emitted tree plus its runtime
+ * dependency (`zod`) into `resources/teacher-runtime/global-memory/`, the way the CLIs land in
+ * `cli/` and the presentation kit lands in `ppt/`.
+ *
+ * The Harness packages the plugin imports (`@deepseek-ai/cordis`, `dsh-agent`, `dsh-llm`,
+ * `dsh-storage-domain`, `dsh-system-prompt`, `dsh-tools`, `@deepseek-ai/schemastery`) stay
+ * `peerDependencies`: the host application payload already carries the pinned closure, and
+ * duplicating it here would double the installer for no functional gain. `zod` is a real
+ * dependency of the durable record schemas, so it is installed locally.
+ *
+ * The shipped manifest is deliberately reduced: no `dsh.bundle` declaration (this package is
+ * mounted by the desktop Host layer, and a bundle layer would mount the same plugin a second
+ * time), no `scripts`, and no `devDependencies` — none of those can run in an installation that
+ * ships no TypeScript toolchain. `installRuntimeDeps` writes its own manifest first, so the
+ * shipped one is written afterwards and overwrites it.
+ */
+function stepGlobalMemory() {
+  const target = path.join(TEACHER_RUNTIME, 'global-memory')
+  const packageDir = path.join(TEACHER, 'packages', 'global-memory')
+  const sourceManifest = readJson(path.join(packageDir, 'package.json'))
+  buildGlobalMemoryIfStale(packageDir, path.join(packageDir, 'lib', 'src', 'index.js'))
+
+  const lib = path.join(packageDir, 'lib')
+  const entryRelative = sourceManifest.main ?? './lib/src/index.js'
+  if (!fs.existsSync(path.join(packageDir, entryRelative))) {
+    throw new Error(
+      `@teacher-dsh/global-memory declares main ${entryRelative}, which its build did not emit`,
+    )
+  }
+
+  emptyDir(target)
+  copyDir(lib, path.join(target, 'lib'))
+  installRuntimeDeps(target, { ...(sourceManifest.dependencies ?? {}) })
+  writeJson(path.join(target, 'package.json'), {
+    ...sourceManifest,
+    private: true,
+    description: 'Teacher DSH bundled long-term memory service (@teacher-dsh/global-memory)',
+    dependencies: { ...(sourceManifest.dependencies ?? {}) },
+    scripts: undefined,
+    devDependencies: undefined,
+    peerDependencies: undefined,
+    dsh: undefined
+  })
+  reportSize('global-memory', target)
+}
+
+/**
  * Prune the freshly installed runtime trees.
  *
  * Only the installed dependency trees (`artifact`, `ppt`, `deploy`) are pruned: `cli` and
@@ -877,6 +969,7 @@ function stepPrune() {
   const targets = [
     { label: 'artifact', dir: path.join(TEACHER_RUNTIME, 'artifact') },
     { label: 'ppt', dir: path.join(TEACHER_RUNTIME, 'ppt') },
+    { label: 'global-memory', dir: path.join(TEACHER_RUNTIME, 'global-memory') },
     { label: 'deploy', dir: path.join(TEACHER_RUNTIME, 'deploy'), mapsOnly: true }
   ]
   let removed = 0
@@ -1019,6 +1112,7 @@ const STEPS = [
   ['cli', stepCli],
   ['artifact', stepArtifact],
   ['ppt', stepPpt],
+  ['global-memory', stepGlobalMemory],
   ['deploy', stepDeploy],
   ['prune', stepPrune],
   ['skills', stepSkills],

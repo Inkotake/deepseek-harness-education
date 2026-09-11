@@ -17,6 +17,10 @@ dsh-community-market/lib/
 # Teacher DSH layer
 teacher/**/node_modules/
 teacher/**/dist/
+# `@teacher-dsh/global-memory` compiles to JavaScript; its output is rebuilt by
+# build-teacher-runtime.mjs, so it is not tracked — matching the sibling teacher packages, which
+# carry no build output at all.
+teacher/packages/*/lib/
 teacher/**/*.tgz
 teacher/legacy/node_modules/
 

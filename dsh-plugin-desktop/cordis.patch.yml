@@ -18,6 +18,13 @@
       name: dsh-plugin-desktop/profiles
     - id: desktop-updates
       name: dsh-plugin-desktop/updates
+    # One shared teacher-memory service for every preset. It is mounted HERE, on the desktop-owned
+    # Host layer, and deliberately not from a bundle or a preset: a preset `isolate` realm would
+    # give each preset its own memory, which is the opposite of the design. The name is quoted
+    # because a bare leading `@` is a reserved YAML indicator. `build-profile-seed.mjs` links the
+    # built runtime into `profiles/desktop/node_modules`, which is what makes this row resolvable.
+    - id: global-memory
+      name: '@teacher-dsh/global-memory'
 
 # A desktop launch has no terminal operator waiting for the Web readiness line.
 - id: web-runtime

@@ -323,6 +323,7 @@
       "cordis.patch.yml",
       "build/**",
       "lib/**",
+      "presets/**",
       "node_modules/**"
     ],
     "afterPack": "./scripts/verify-packaged-runtime.ts",

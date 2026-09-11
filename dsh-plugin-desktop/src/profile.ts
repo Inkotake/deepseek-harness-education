@@ -82,6 +82,10 @@ const OBSOLETE_DESKTOP_BUNDLE_SET = new Set(['@deepseek-ai/dsh-desktop-app'])
 const INSTALL_ANCHOR = unpackedAsarPath(fileURLToPath(new URL('../package.json', import.meta.url)))
 const DESKTOP_PATCH_PATH = fileURLToPath(new URL('../cordis.patch.yml', import.meta.url))
 const PWSH_SANDBOX_ROW_ID = 'pwsh-sandbox'
+const DIRECTORY_PICKER_ROW_ID = 'directory-picker'
+const AUTO_PICKER_PACKAGE = '@deepseek-ai/dsh-host-directory-picker-auto'
+const BROWSE_PICKER_BACKEND = '@deepseek-ai/dsh-host-directory-picker-browse'
+const BROWSE_PICKER_SURFACE = '@deepseek-ai/dsh-client-ui-directory-picker-browse'
 const UPSTREAM_PWSH_SANDBOX_PACKAGE = '@deepseek-ai/dsh-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_ROW_ID = 'desktop-windows-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_PACKAGE = `${DESKTOP_PACKAGE_NAME}/windows-pwsh-sandbox`
@@ -976,34 +980,38 @@ export function prepareDesktopProfile(
         throw new Error(`${BIN_NAME}: ${mode} desktop mode must use ${packageName} in the ${id} row`)
       }
     }
+    // `ui-layout` deliberately stays ENABLED. Disabling it used to hand the `root` slot to the
+    // Desktop-owned frame, which only worked while this launcher could mirror the whole layout
+    // contract. Harness 0.1.5 grew the frame's responsibilities (`main` keyed, `rightbar`, and the
+    // `ui-sidebar-right`/`ui-dockkit` packages the official bundle mounts by default), and a frame
+    // that declares only `sidebar`/`conversation`/`details` leaves every one of those slots
+    // undeclared — the packages that register into them drop out and most of the UI disappears.
+    // Advanced mode therefore gates desktop affordances, not presentation: upstream keeps the root
+    // and the desktop client plugin only adds its own surfaces.
     patches.push(
-      { id: 'ui-layout', disabled: true },
       { id: 'ui-sidebar', disabled: false },
       { id: 'ui-conversation', disabled: false },
     )
   }
   const presets = rows.get(AGENT_PRESETS_ROW_ID)
   if (presets !== undefined) {
-    // Advanced mode keeps the shipped roster: an operator there is choosing between the runtime's own
-    // compositions. Every other mode offers the two a teacher actually picks between, which needs a
-    // materialized root because `dsh-agent-presets` has no per-preset filter to hide the rest with.
-    const teacherPresets = mode === 'advanced'
-      ? undefined
-      : materializeTeacherPresetRoot({
-        homeDir: home,
-        shippedRoot: shippedPresetRoot(),
-        teacherSource: teacherPresetSource(),
-      })
-    const config = teacherPresets === undefined
-      ? {
-          ...rowConfig(presets),
-          roots: [{ path: shippedPresetRoot(), trust: 'system' }],
-        }
-      : {
-          ...rowConfig(presets),
-          includeShippedRoot: false,
-          roots: [{ path: teacherPresets, trust: 'system' }],
-        }
+    // Advanced mode is a SUPERSET, never a substitute: it offers everything the runtime ships plus
+    // this distribution's own presets. Every other mode offers only what a teacher actually picks
+    // between, which needs a materialized root because `dsh-agent-presets` exposes no per-preset
+    // filter to hide the rest with. Both modes state `roots` explicitly and turn `includeShippedRoot`
+    // off, so the shipped root is listed once and never scanned twice.
+    const teacherPresets = materializeTeacherPresetRoot({
+      homeDir: home,
+      shippedRoot: shippedPresetRoot(),
+      teacherSource: teacherPresetSource(),
+    })
+    const roots = [
+      ...(mode === 'advanced' ? [{ path: shippedPresetRoot(), trust: 'system' }] : []),
+      ...(teacherPresets === undefined ? [] : [{ path: teacherPresets, trust: 'system' }]),
+    ]
+    const config = roots.length === 0
+      ? { ...rowConfig(presets), roots: [{ path: shippedPresetRoot(), trust: 'system' }] }
+      : { ...rowConfig(presets), includeShippedRoot: false, roots }
     patches.push({ id: AGENT_PRESETS_ROW_ID, config })
   }
   const webserver = rows.get('webserver')
@@ -1011,11 +1019,37 @@ export function prepareDesktopProfile(
     throw new Error(`${BIN_NAME}: desktop profile has no webserver row`)
   }
   if (platform === 'win32') {
-    // The directory-picker row keeps the composition upstream ships. `directory-picker-auto` resolves
-    // to the native backend on a loopback-bound local display, which opens the real OS chooser, and
-    // that is strictly better than the in-app panel this launcher used to pin. Pinning the browse
-    // pair was only ever needed to host a system-folder button inside that panel, and upstream now
-    // owns the whole native flow.
+    // Prefer the in-app browse panel over the native OS chooser.
+    //
+    // Both are upstream's own; `directory-picker-auto` would pick `native` here, because this
+    // launcher binds loopback and runs at a real display. The native backend opens its dialog in a
+    // child process and relies on synthesizing one Alt press to claim foreground, which is how
+    // Windows grants activation to a process that is not the foreground one. Under an Electron host
+    // that claim loses to the application window, so the chooser opens BEHIND it and looks like
+    // nothing happened. Pinning the browse pair keeps the interaction inside the window, needs no
+    // patch, and is the same backend `auto` falls back to whenever native is not provably usable.
+    if (!rows.has(DIRECTORY_PICKER_ROW_ID)) {
+      throw new Error(`${BIN_NAME}: desktop profile has no directory-picker row`)
+    }
+    patches.push(
+      {
+        id: DIRECTORY_PICKER_ROW_ID,
+        name: AUTO_PICKER_PACKAGE,
+        disabled: true,
+      },
+      {
+        insert: [
+          {
+            id: 'desktop-directory-picker-browse-host',
+            name: BROWSE_PICKER_BACKEND,
+          },
+          {
+            id: 'desktop-directory-picker-browse-surface',
+            name: BROWSE_PICKER_SURFACE,
+          },
+        ],
+      },
+    )
     const pwshSandbox = rows.get(PWSH_SANDBOX_ROW_ID)
     if (pwshSandbox?.name === UPSTREAM_PWSH_SANDBOX_PACKAGE
       && !rowDisabledOnPlatform(pwshSandbox, platform)) {

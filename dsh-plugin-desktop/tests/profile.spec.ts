@@ -719,7 +719,8 @@ virtualStoreDirMaxLength: 60
     expect(rows.find(row => row.id === 'settings')).toEqual(expect.objectContaining({
       config: expect.objectContaining({ dshHome: home }),
     }))
-    expect(rows.find(row => row.id === 'ui-layout')?.disabled).toBe(true)
+    // Advanced mode gates desktop affordances, not presentation: upstream keeps the root layout.
+    expect(rows.find(row => row.id === 'ui-layout')?.disabled).toBeFalsy()
     expect(rows.find(row => row.id === 'ui-sidebar')?.disabled).toBe(false)
     expect(rows.find(row => row.id === 'ui-conversation')?.disabled).toBe(false)
   })
@@ -769,7 +770,7 @@ virtualStoreDirMaxLength: 60
       macosMaterial: 'off',
       windowsMaterial: 'mica',
     }))
-    expect(rows.find(row => row.id === 'ui-layout')?.disabled).toBe(true)
+    expect(rows.find(row => row.id === 'ui-layout')?.disabled).toBeFalsy()
     expect(rows.find(row => row.id === 'ui-sidebar')?.disabled).toBe(false)
     expect(rows.find(row => row.id === 'ui-conversation')?.disabled).toBe(false)
     expect(rows.find(row => row.id === 'desktop-shell')).toEqual(expect.objectContaining({
@@ -926,15 +927,21 @@ virtualStoreDirMaxLength: 60
     const rows = composeEntries([prepared.patches])
     const picker = rows.find(row => row.id === 'directory-picker')
 
-    // The launcher leaves the picker choice to upstream. `directory-picker-auto` resolves to the
-    // native OS chooser on a loopback-bound local display; pinning the browse pair was only ever
-    // needed to host a system-folder button inside that panel, and upstream now owns that flow.
+    // The native OS chooser claims foreground by synthesizing an Alt press, which loses to an
+    // Electron host window, so it opens behind the app. The in-app browse panel is upstream's other
+    // backend and needs no patch.
     expect(picker).toEqual(expect.objectContaining({
       name: '@deepseek-ai/dsh-host-directory-picker-auto',
+      disabled: true,
     }))
-    expect(picker?.disabled).toBeFalsy()
-    expect(rows.map(row => row.id)).not.toContain('desktop-directory-picker-browse-host')
-    expect(rows.map(row => row.id)).not.toContain('desktop-directory-picker-browse-surface')
+    expect(rows).toContainEqual(expect.objectContaining({
+      id: 'desktop-directory-picker-browse-host',
+      name: '@deepseek-ai/dsh-host-directory-picker-browse',
+    }))
+    expect(rows).toContainEqual(expect.objectContaining({
+      id: 'desktop-directory-picker-browse-surface',
+      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse',
+    }))
     expect(rows.find(row => row.id === 'subprocess')).toEqual({
       id: 'subprocess',
       name: '@deepseek-ai/dsh-subprocess-local',

@@ -684,6 +684,9 @@ describe('published package surface', () => {
       'cordis.patch.yml',
       'build/**',
       'lib/**',
+      // Unpacked because the profile preparation copies these onto disk. They live inside the archive
+      // otherwise, where the path `unpackedAsarPath` derives would not exist.
+      'presets/**',
       'node_modules/**',
     ])
     expect(manifest.build?.electronFuses).toEqual({ runAsNode: true })

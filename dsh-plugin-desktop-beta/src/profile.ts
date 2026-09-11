@@ -86,6 +86,12 @@ const UPSTREAM_PWSH_SANDBOX_PACKAGE = '@deepseek-ai/dsh-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_ROW_ID = 'desktop-windows-pwsh-sandbox'
 const DESKTOP_WINDOWS_PWSH_SANDBOX_PACKAGE = `${DESKTOP_PACKAGE_NAME}/windows-pwsh-sandbox`
 const AGENT_PRESETS_ROW_ID = 'agent-presets'
+/** Operator-facing rows standard mode does not present; each only consumes services or adds a view. */
+const NON_ADVANCED_DISABLED_ROWS: readonly string[] = [
+  'ui-trajectory',
+  'plugin-inventory',
+  'ui-settings-plugin-inventory',
+]
 /** Harness-home directory holding locally authored presets (`agent-presets/discovery`). */
 const USER_PRESET_DIRNAME = '.agent-presets'
 const DEFAULT_DESKTOP_SHELL_MODE: DesktopShellMode = 'compatibility'
@@ -968,8 +974,13 @@ export function prepareDesktopProfile(
         throw new Error(`${BIN_NAME}: ${mode} desktop mode must use ${packageName} in the ${id} row`)
       }
     }
+    // `ui-layout` deliberately stays ENABLED. Disabling it hands the `root` slot to a
+    // Desktop-owned frame that mirrors the 0.1.2 layout contract; Harness 0.1.5 grew the frame's
+    // responsibilities (`main` keyed, `rightbar`, and the ui-sidebar-right/dockkit packages the
+    // official bundle mounts by default), so in advanced mode every one of those slots went
+    // undeclared and the packages registering into them dropped out — most of the UI disappeared.
+    // Advanced mode gates desktop affordances, not presentation.
     patches.push(
-      { id: 'ui-layout', disabled: true },
       { id: 'ui-sidebar', disabled: false },
       { id: 'ui-conversation', disabled: false },
     )
@@ -994,6 +1005,15 @@ export function prepareDesktopProfile(
       id: AGENT_PRESETS_ROW_ID,
       config: { ...rowConfig(presets), roots, includeUserRoot: false },
     })
+  }
+  // Standard mode is the teacher-facing default and shows less; Advanced mode reveals the operator
+  // tools. Every row below only consumes services or registers a view, so disabling it removes that
+  // surface without taking another package down with it — unlike `ui-layout` above, whose root slot
+  // everything else registers into.
+  if (mode !== 'advanced') {
+    for (const rowId of [...NON_ADVANCED_DISABLED_ROWS, ...MARKET_ROW_IDS]) {
+      if (rows.has(rowId)) patches.push({ id: rowId, disabled: true })
+    }
   }
   const webserver = rows.get('webserver')
   if (webserver === undefined) {

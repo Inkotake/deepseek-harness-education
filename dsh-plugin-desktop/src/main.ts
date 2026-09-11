@@ -626,7 +626,18 @@ async function start(): Promise<void> {
     })
     for (const [name, value] of Object.entries(shellEnvironmentResolution.updates)) process.env[name] = value
     const profileUserDataDir = safeModePaths?.userDataDir ?? desktopUserDataDir
-    const homeDir = safeModePaths?.homeDir ?? resolveDshHome()
+    // Teacher DSH keeps its Harness home inside this application's own data directory. Sharing
+    // `~/.dsh` with a DSH installation the user already has would read their credentials,
+    // settings, and session history, and would write our profiles into it. An explicit DSH_HOME
+    // still wins, because the headless probes and power users set it deliberately.
+    const explicitDshHome = process.env.DSH_HOME
+    const homeDir = safeModePaths?.homeDir
+      ?? (explicitDshHome !== undefined && explicitDshHome !== ''
+        ? resolveDshHome()
+        : join(profileUserDataDir, 'dsh-home'))
+    // Publish it before anything reads a Harness home, so the launcher, the generated `dsh`
+    // command, and every child process agree on the same isolated directory.
+    process.env.DSH_HOME = homeDir
     if (safeModePaths !== undefined) process.env.DSH_HOME = homeDir
     prepareSafeMode = safeModePaths === undefined
       ? () => {

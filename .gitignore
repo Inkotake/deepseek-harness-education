@@ -35,3 +35,4 @@ resources/teacher-seed/plugins-built/
 # Throwaway probes and scratch scripts must never be committed.
 /tmp-*
 /tmp_*
+dsh-plugin-desktop/dist-release/

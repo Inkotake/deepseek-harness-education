@@ -78,35 +78,45 @@ export function applyDesktopSettings(
     () => installDesktopSettingsStyles(),
     'dsh-plugin-desktop: settings styles',
   )
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'desktop',
-    order: 100,
-    label: () => t('nav'),
-    locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
-    inject: () => ({
-      api,
-      platform: environment.platform,
-      version: environment.version,
-      initialMode: environment.mode,
-      micaSupported: environment.micaSupported,
-      setMode,
-      desktopSettings,
-      notificationSettings,
-    }),
-  }, DesktopSettingsSection))
-  ctx.slots.inject('settings.action', () => ctx.slots.register({
-    name: 'settings.action',
-    id: 'open-desktop-terminal',
-    order: 1,
-    locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
-    inject: () => ({ api }),
-  }, DesktopTerminalSettingsAction))
-  // Teacher DSH 0.1 decision: the Desktop Setup Wizard is skipped on first run, so the
-  // `advanced` shell mode had no reachable control. This additive row is the
-  // General-section switch for the existing `dsh-desktop.mode` value: it persists the
-  // same field the Desktop page's presentation choices write, and the Host's settings
-  // watcher asks for the restart that composes the advanced presentation bundle.
+  // Standard mode is the teacher-facing default and shows less: the Desktop page carries the
+  // launcher's operator surfaces (appearance, browser and LAN access, notifications, the terminal
+  // action, diagnostics, developer tools) and none of them belong in it. Advanced mode reveals them.
+  if (environment.mode === 'advanced') {
+    ctx.slots.inject('settings.section', () => ctx.slots.register({
+      name: 'settings.section',
+      id: 'desktop',
+      order: 100,
+      label: () => t('nav'),
+      locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
+      inject: () => ({
+        api,
+        platform: environment.platform,
+        version: environment.version,
+        initialMode: environment.mode,
+        micaSupported: environment.micaSupported,
+        setMode,
+        desktopSettings,
+        notificationSettings,
+      }),
+    }, DesktopSettingsSection))
+    ctx.slots.inject('settings.action', () => ctx.slots.register({
+      name: 'settings.action',
+      id: 'open-desktop-terminal',
+      order: 1,
+      locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
+      inject: () => ({ api }),
+    }, DesktopTerminalSettingsAction))
+  }
+  // The Advanced toggle stays registered in EVERY mode. It is the only reachable control for the
+  // `dsh-desktop.mode` value — the Desktop Setup Wizard is skipped on first run — so gating it with
+  // the page it controls would leave Advanced mode impossible to turn on. That is a one-way door,
+  // and it is why the registration is split rather than skipped wholesale.
+  //
+  // Teacher DSH 0.1 decision: the Wizard is skipped on first run, so the `advanced` shell mode had
+  // no reachable control. This additive row is the General-section switch for the existing
+  // `dsh-desktop.mode` value: it persists the same field the Desktop page's presentation choices
+  // write, and the Host's settings watcher asks for the restart that composes the advanced
+  // presentation bundle.
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
     id: 'desktop-advanced-mode',

@@ -576,7 +576,7 @@ describe('Desktop native action presentation', () => {
 })
 
 describe('Desktop settings Slot registration', () => {
-  it('registers the official Desktop section, native actions, and both settings scopes', async () => {
+  it('registers the official Desktop section, native actions, and both settings scopes in advanced mode', async () => {
     const scope = {
       getSnapshot: () => ({
         status: 'loading' as const,
@@ -608,7 +608,7 @@ describe('Desktop settings Slot registration', () => {
 
     const control = applyDesktopSettings(ctx, {
       version: '2.0.3',
-      mode: 'compatibility',
+      mode: 'advanced',
       platform: 'darwin',
       material: 'off',
       micaSupported: false,
@@ -632,7 +632,7 @@ describe('Desktop settings Slot registration', () => {
     expect(options.inject()).toMatchObject({
       platform: 'darwin',
       version: '2.0.3',
-      initialMode: 'compatibility',
+      initialMode: 'advanced',
       micaSupported: false,
       setMode: expect.any(Function),
     })
@@ -664,13 +664,62 @@ describe('Desktop settings Slot registration', () => {
     })
     expect(advancedOptions.inject()).toMatchObject({
       platform: 'darwin',
-      initialMode: 'compatibility',
+      initialMode: 'advanced',
       setMode: expect.any(Function),
     })
     expect(advancedOptions.inject()).toHaveProperty('desktopSettings', scope)
     expect(advancedComponent).toBe(DesktopAdvancedModeRow)
     await control.setMode('extended')
     expect(scope.set).toHaveBeenCalledWith('mode', 'extended')
+  })
+
+  it('withholds the Desktop page and its operator actions from standard mode', () => {
+    // The split only matters in one direction, and this is that direction: the Desktop page carries
+    // the launcher's operator surfaces, so standard mode must not register it — while the Advanced
+    // toggle must survive, because it is the only control that can ever bring the page back. Gating
+    // both together would be a one-way door.
+    const scope = {
+      getSnapshot: () => ({
+        status: 'loading' as const,
+        value: undefined,
+        base: undefined,
+        user: undefined,
+        revision: undefined,
+        writable: false,
+        mode: 'host' as const,
+      }),
+      subscribe: () => () => {},
+      set: vi.fn(async () => {}),
+      unset: vi.fn(async () => {}),
+      mutate: vi.fn(async () => {}),
+    } satisfies SettingsScope<unknown>
+    const register = vi.fn(() => () => {})
+    const inject = vi.fn((_name: string, mount: () => unknown) => mount())
+    const ctx = {
+      settingsScope: { bind: vi.fn(() => scope) },
+      locale: {
+        bind: (namespace: string) => (key: string) => `${namespace}:${key}`,
+        register: vi.fn(() => () => {}),
+      },
+      effect: vi.fn(),
+      slots: { inject, register },
+    } as unknown as ClientContext
+
+    const control = applyDesktopSettings(ctx, {
+      version: '2.0.3',
+      mode: 'compatibility',
+      platform: 'darwin',
+      material: 'off',
+      micaSupported: false,
+    })
+
+    expect(inject).not.toHaveBeenCalledWith('settings.section', expect.any(Function))
+    expect(inject).not.toHaveBeenCalledWith('settings.action', expect.any(Function))
+    expect(inject).toHaveBeenCalledWith('settings.general.item', expect.any(Function))
+    expect(register).toHaveBeenCalledTimes(1)
+    const [options] = register.mock.calls[0] as unknown as [{ id: string }]
+    expect(options.id).toBe('desktop-advanced-mode')
+    expect(control.setMode).toEqual(expect.any(Function))
   })
 })
 

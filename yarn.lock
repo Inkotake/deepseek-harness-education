@@ -2425,13 +2425,13 @@ __metadata:
 
 "@deepseek-ai/dsh-host-directory-picker-browse@patch:@deepseek-ai/dsh-host-directory-picker-browse@file%3Avendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-host-directory-picker-browse-0.1.5-rc.2.tgz#./patches/dsh-host-directory-picker-browse@0.1.5-rc.2.patch::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.1.5-rc.2
-  resolution: "@deepseek-ai/dsh-host-directory-picker-browse@patch:@deepseek-ai/dsh-host-directory-picker-browse@file%3Avendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-host-directory-picker-browse-0.1.5-rc.2.tgz%23vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-host-directory-picker-browse-0.1.5-rc.2.tgz%3A%3Ahash=0bc3ad&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-host-directory-picker-browse@0.1.5-rc.2.patch::version=0.1.5-rc.2&hash=8facc7&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "@deepseek-ai/dsh-host-directory-picker-browse@patch:@deepseek-ai/dsh-host-directory-picker-browse@file%3Avendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-host-directory-picker-browse-0.1.5-rc.2.tgz%23vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-host-directory-picker-browse-0.1.5-rc.2.tgz%3A%3Ahash=0bc3ad&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-host-directory-picker-browse@0.1.5-rc.2.patch::version=0.1.5-rc.2&hash=535d36&locator=deepseek-harness-desktop%40workspace%3A."
   dependencies:
     "@deepseek-ai/dsh-host-directory-picker": "npm:^0.1.5-rc.2"
     "@deepseek-ai/schemastery": "npm:^3.18.2"
   peerDependencies:
     "@deepseek-ai/cordis": ^4.0.2
-  checksum: 10c0/701a278186fcc12f9b355059e6c5df98293be68815fac109281d7ffad60286786cb32f07002fa5f7c401a91a06131d5cb81359e2661d86cc94777b4703d8b71a
+  checksum: 10c0/09719ed4c35e6caee3365d30b1a586cc04f04309551d81f10cce276ca026957d07abf7867731f68a3b954e822c35de4a00f0046de3c08aeca7eb47f88457f683
   languageName: node
   linkType: hard
 

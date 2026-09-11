@@ -227,6 +227,28 @@ describe('published package surface', () => {
     }
   })
 
+  it('patches the browse backend to open on the user Desktop with a home fallback', () => {
+    const patchPath = dshPatchPath('dsh-host-directory-picker-browse')
+    const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
+    const installedHost = readFileSync(new URL(
+      'node_modules/@deepseek-ai/dsh-host-directory-picker-browse/lib/index.js',
+      packageRoot,
+    ), 'utf8')
+    for (const marker of [
+      'let target = resolve(path ?? home);',
+      'if (path === void 0 && process.platform === "win32") {',
+      'const desktop = join(home, "Desktop");',
+      'if ((await raceAbort(stat(desktop), signal)).isDirectory()) target = desktop;',
+      '/* No Desktop directory on this profile: the home listing is the fallback. */',
+    ]) {
+      expect(patch).toContain(marker)
+      expect(installedHost).toContain(marker)
+    }
+    // The Desktop is only the starting point: the listing still reports the real home directory,
+    // which is the anchor the client collapses its breadcrumb rows against.
+    expect(installedHost).toMatch(/return \{\s+path: target,\s+home,\s+crumbs: ancestryCrumbs\(target\),/u)
+  })
+
   it('keeps both Desktop channels on the pinned runtime family', () => {
     const dshResolutions = Object.entries(workspaceManifest.resolutions ?? {})
       .filter(([selector]) => selector === '@deepseek-ai/dsh' || selector.startsWith('@deepseek-ai/dsh-'))

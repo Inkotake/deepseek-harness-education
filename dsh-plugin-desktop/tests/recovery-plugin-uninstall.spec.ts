@@ -1,5 +1,4 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -13,7 +12,7 @@ import {
 const roots: string[] = []
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }) })
 
-function fixture(source: string) {
+function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'dsh-recovery-plugin-uninstall-'))
   roots.push(root)
   const profileDir = join(root, 'home', 'profiles', 'desktop')
@@ -22,11 +21,7 @@ function fixture(source: string) {
   mkdirSync(profileDir, { recursive: true })
   mkdirSync(nodeBinDir, { recursive: true })
   mkdirSync(pnpmBinDir, { recursive: true })
-  const dshBootstrapPath = join(root, 'desktop-cli.mjs')
-  writeFileSync(dshBootstrapPath, source)
   return {
-    appExecutable: process.execPath,
-    dshBootstrapPath,
     profileName: 'desktop',
     profileDir,
     homeDir: join(root, 'home'),
@@ -38,9 +33,21 @@ function fixture(source: string) {
   }
 }
 
+/** The pnpm command name the recovery environment resolves first on PATH. */
+const PNPM_COMMAND = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
+
+/** Write the `pnpm` shim the recovery path resolves, running `script`. */
+function writePnpmShim(pnpmBinDir: string, script: string): void {
+  const target = join(pnpmBinDir, PNPM_COMMAND)
+  writeFileSync(target, process.platform === 'win32'
+    ? `@"${process.execPath}" "${script}" %*\r\n`
+    : `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`)
+  if (process.platform !== 'win32') chmodSync(target, 0o700)
+}
+
 describe('pre-Host recovery plugin uninstall command', () => {
   it('pins packaged Node and pnpm ahead of a released or hostile system PATH', () => {
-    const options = fixture('')
+    const options = fixture()
     const systemBin = join(dirname(options.profileDir), 'system-bin')
     const environment = recoveryPluginEnvironment({
       ...options,
@@ -61,7 +68,7 @@ describe('pre-Host recovery plugin uninstall command', () => {
   })
 
   it('normalizes the case-insensitive Windows PATH before projecting recovery commands', () => {
-    const options = fixture('')
+    const options = fixture()
     const systemBin = 'C:\\System Pnpm'
     const environment = recoveryPluginEnvironment({
       ...options,
@@ -73,12 +80,18 @@ describe('pre-Host recovery plugin uninstall command', () => {
     expect(environment.KEEP).toBe('value')
   })
 
-  it('runs the packaged official dsh plugin remove argv for the selected Profile', async () => {
-    const options = fixture(`process.stdout.write(JSON.stringify({ argv: process.argv.slice(2), home: process.env.DSH_HOME, path: process.env.PATH }))\n`)
+  it('runs the packaged pnpm remove argv inside the selected Profile directory', async () => {
+    const options = fixture()
     const systemBin = join(dirname(options.profileDir), 'system-bin')
+    const echo = join(options.pnpmBinDir, 'echo-pnpm.cjs')
+    writeFileSync(echo, 'process.stdout.write(JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), home: process.env.DSH_HOME, path: process.env.PATH }))\n')
+    writePnpmShim(options.pnpmBinDir, echo)
     const result = await removeRecoveryPlugin({ ...options, environment: { PATH: systemBin } })
     expect(JSON.parse(result.stdout)).toEqual({
-      argv: ['plugin', '--profile', 'desktop', 'remove', 'third-party-plugin'],
+      // pnpm's own argument vector, not a `dsh plugin` forward: Harness 0.1.5 refuses the launcher for
+      // a profile named `desktop`, so the recovery path calls the package manager directly.
+      argv: ['remove', 'third-party-plugin'],
+      cwd: options.profileDir,
       home: options.homeDir,
       path: [options.nodeBinDir, options.pnpmBinDir, systemBin].join(delimiter),
     })
@@ -89,24 +102,8 @@ describe('pre-Host recovery plugin uninstall command', () => {
     })
   })
 
-  /**
-   * KNOWN REGRESSION, marked expected-to-fail on purpose.
-   *
-   * Harness 0.1.5 rejects any CLI invocation that names the `desktop` profile: `rejectElectronProfile`
-   * in `apps/cli/src/args.ts` errors for it, and both the boot path and the `plugin` command call it.
-   * This recovery path removes a plugin by running `dsh plugin --profile desktop remove <pkg>`, so
-   * upstream now refuses, and the escape hatch for a plugin that breaks startup is gone.
-   *
-   * The fix is to stop delegating and remove the plugin in-process the way upstream's `plugin remove`
-   * does — drop the dependency, rewrite the profile manifest and lockfile, prune `node_modules` —
-   * using the packaged pnpm. `it.fails` keeps the gap visible and turns red the moment that lands,
-   * which is the signal to delete this marker.
-   */
-  it.fails('uses packaged pnpm after runtime PATH release and preserves official bundle reconciliation', async () => {
-    const base = fixture('')
-    const require = createRequire(import.meta.url)
-    const dshManifestPath = require.resolve('@deepseek-ai/dsh/package.json')
-    const dshBootstrapPath = join(dirname(dshManifestPath), 'lib', 'bin.js')
+  it('uses packaged pnpm after runtime PATH release and preserves official bundle reconciliation', async () => {
+    const base = fixture()
     const systemBin = join(dirname(base.profileDir), 'system-bin')
     const selectedMarker = join(dirname(base.profileDir), 'selected-pnpm.txt')
     const packagedScript = join(base.pnpmBinDir, 'packaged-pnpm.cjs')
@@ -176,7 +173,6 @@ describe('pre-Host recovery plugin uninstall command', () => {
       : {}
     await expect(removeRecoveryPlugin({
       ...base,
-      dshBootstrapPath,
       environment: {
         ...windowsShell,
         PATH: systemBin,
@@ -195,13 +191,16 @@ describe('pre-Host recovery plugin uninstall command', () => {
     expect(existsSync(installedPluginDir)).toBe(false)
   })
 
-  it('retains bounded command diagnostics when dsh plugin remove fails', async () => {
-    const options = fixture(`process.stderr.write('simulated remove failure\\n'); process.exitCode = 7\n`)
+  it('retains bounded command diagnostics when pnpm remove fails', async () => {
+    const options = fixture()
+    const failing = join(options.pnpmBinDir, 'failing-pnpm.cjs')
+    writeFileSync(failing, "process.stderr.write('simulated remove failure\\n'); process.exitCode = 7\n")
+    writePnpmShim(options.pnpmBinDir, failing)
     let failure: unknown
     try { await removeRecoveryPlugin(options) } catch (cause) { failure = cause }
     expect(failure).toBeInstanceOf(RecoveryPluginUninstallError)
     const detail = formatRecoveryPluginRemoveFailure(failure)
-    expect(detail).toContain('dsh plugin --profile desktop remove third-party-plugin')
+    expect(detail).toContain('pnpm remove third-party-plugin')
     expect(detail).toContain('Package-manager policy: --config.minimumReleaseAge=0')
     expect(detail).toContain('Exit status: 7')
     expect(detail).toContain('simulated remove failure')

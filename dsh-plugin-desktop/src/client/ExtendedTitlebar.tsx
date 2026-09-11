@@ -13,17 +13,17 @@ export interface DesktopFrameTitlebarInjected {
 export type DesktopFrameTitlebarProps = PropsRuntime<'shell.overlay'>
   & InjectFace<DesktopFrameTitlebarInjected>
 
+/** Product wordmark shown in the frame band. A brand name, not translatable copy. */
+export const DESKTOP_FRAME_TITLE = 'DeepSeek Harness Teacher'
+
 /**
  * Horizontal frame surface; the unrelated upstream content starts below it.
  *
- * The band is deliberately empty: it only reserves the platform caption-button
- * corner and provides the window drag region, so the default window reads as the
- * official client. It used to carry the "DSH Desktop" identity block (version
- * and presentation mode) and the launcher action cluster; presentation mode and
- * version/update controls now live in the Desktop settings page, and the
- * launcher actions in the settings header, both registered by
- * `desktop-settings.ts`. `data-platform` and `data-material` stay because the
- * frame stylesheet derives that reserved corner from them.
+ * The band carries the product wordmark and nothing else. It used to hold the version control,
+ * the presentation-mode switcher and the launcher action cluster; those live in Settings now
+ * (registered by `desktop-settings.ts`), so the band cannot be mistaken for part of the official
+ * client. It stays a drag region, and `data-platform` and `data-material` stay because the frame
+ * stylesheet derives the reserved caption-button corner from them.
  */
 export function DesktopFrameTitlebar({ environment }: DesktopFrameTitlebarProps) {
   return createPortal((
@@ -32,6 +32,8 @@ export function DesktopFrameTitlebar({ environment }: DesktopFrameTitlebarProps)
       data-dsh-desktop-frame="titlebar"
       data-platform={environment.platform}
       data-material={environment.material}
-    />
+    >
+      <span className="dshDesktopFrameTitle">{DESKTOP_FRAME_TITLE}</span>
+    </header>
   ), document.body)
 }

@@ -93,6 +93,22 @@ const PATCHES = [
     ],
   },
   {
+    package: '@deepseek-ai/dsh-host-directory-picker-native',
+    why: 'The Win32 folder dialog runs in a child process spawned from process.execPath, which is '
+      + 'Electron inside this desktop build. Upstream assumes that path is plain node ("built consumers '
+      + 'launch the bundled CJS entry under plain node"), so without ELECTRON_RUN_AS_NODE the child '
+      + 'boots as a second application instance and exits before reporting a dialog result — the picker '
+      + 'always fails with "worker exited before reporting a result".',
+    edits: [
+      {
+        file: /^lib\/index\.js$/u,
+        find: /\n(\t+)DSH_DIALOG_TITLE: data\.title\n/u,
+        replace: '\n$1DSH_DIALOG_TITLE: data.title,\n$1ELECTRON_RUN_AS_NODE: "1"\n',
+        count: 1,
+      },
+    ],
+  },
+  {
     package: '@deepseek-ai/dsh-host-directory-picker-browse',
     why: 'Windows reparse and system directories are reported as directories by the dirent but can '
       + 'fail stat. The original only probed symbolic links, so those entries stayed selectable and '

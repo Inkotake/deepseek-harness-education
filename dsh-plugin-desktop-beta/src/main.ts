@@ -881,8 +881,6 @@ async function start(): Promise<void> {
         uninstallPlugin: async packageName => {
           try {
             await removeRecoveryPlugin({
-              appExecutable: process.execPath,
-              dshBootstrapPath,
               profileName: activeProfileName,
               profileDir: activeProfileDir,
               homeDir,

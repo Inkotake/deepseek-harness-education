@@ -124,6 +124,20 @@ body[data-dsh-desktop-mode="extended"]:not([data-dsh-desktop-material="off"]) {
 .dshDesktopFrameTitlebar[data-platform="win32"] {
   padding: 0 ${WINDOWS_CAPTION_CONTROLS_WIDTH + 8}px 0 8px;
 }
+/* Product wordmark only. Centred like the identity block it replaces, muted so it reads as a title
+   rather than an action, and non-interactive so the whole band stays a drag region. */
+.dshDesktopFrameTitle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
 .dshDesktopFrameIdentity {
   position: absolute;
   left: 50%;

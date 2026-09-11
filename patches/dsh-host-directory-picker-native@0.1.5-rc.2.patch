@@ -1,0 +1,14 @@
+diff --git a/lib/index.js b/lib/index.js
+index cf55cf3..f0ec119 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -74,7 +74,8 @@ async function closeThreadWindows(threadId) {
+ function spawnDialogWorker(data) {
+ 	const env = {
+ 		...process.env,
+-		DSH_DIALOG_TITLE: data.title
++		DSH_DIALOG_TITLE: data.title,
++		ELECTRON_RUN_AS_NODE: "1"
+ 	};
+ 	const stdio = [
+ 		"ignore",

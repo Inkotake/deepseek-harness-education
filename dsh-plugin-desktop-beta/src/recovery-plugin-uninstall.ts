@@ -1,7 +1,8 @@
 /** Run the official DSH plugin-removal flow before the Cordis Host starts. */
 
 import { execFile } from 'node:child_process'
-import { isAbsolute } from 'node:path'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { isAbsolute, join } from 'node:path'
 import { assertDesktopProfileName } from './profile-manager.ts'
 import { PNPM_IGNORE_MINIMUM_RELEASE_AGE } from './pnpm-policy.ts'
 
@@ -10,9 +11,18 @@ const DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024
 const ELECTRON_HEADERS_URL = 'https://electronjs.org/headers'
 const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u
 
+/**
+ * The package manager the recovery environment puts first on PATH.
+ *
+ * `dsh plugin --profile <name> <args...>` forwards its arguments to pnpm inside the profile
+ * directory and does nothing else, so calling pnpm directly is the same operation without the
+ * launcher. It has to be direct: Harness 0.1.5 rejects any CLI invocation that names a profile
+ * literally called `desktop` (`rejectElectronProfile` in the CLI's argument parser, reached from
+ * both the boot path and the `plugin` command), which is exactly the profile this removes from.
+ */
+const PNPM_COMMAND = 'pnpm'
+
 export interface RecoveryPluginUninstallOptions {
-  readonly appExecutable: string
-  readonly dshBootstrapPath: string
   readonly profileName: string
   readonly profileDir: string
   readonly homeDir: string
@@ -105,7 +115,7 @@ export function formatRecoveryPluginRemoveFailure(cause: unknown): string {
   }
   return [
     'DSH plugin uninstall failed.',
-    `Command: dsh plugin --profile ${cause.result.profileName} remove ${cause.result.packageName}`,
+    `Command: ${PNPM_COMMAND} remove ${cause.result.packageName} (in profile ${cause.result.profileName})`,
     `Package-manager policy: ${PNPM_IGNORE_MINIMUM_RELEASE_AGE}`,
     `Exit status: ${String(cause.result.exitCode)}`,
     `Signal: ${cause.result.signal ?? 'none'}`,
@@ -115,8 +125,42 @@ export function formatRecoveryPluginRemoveFailure(cause: unknown): string {
 }
 
 /**
- * Remove one direct Profile dependency through the packaged `dsh plugin`
- * entry. That command owns both pnpm mutation and bundle reconciliation.
+ * Drop one package from the profile's declared bundle list.
+ *
+ * `pnpm remove` rewrites the dependency and the lockfile but knows nothing about this distribution's
+ * `dsh.profile.bundles` field. A profile that keeps naming a removed bundle fails to compose on the
+ * next boot, which is the one outcome a recovery path must not leave behind. Missing or unreadable
+ * structure is left alone: there is nothing to reconcile, and this runs while the app is already
+ * recovering.
+ * @param profileDir - the profile directory pnpm just rewrote.
+ * @param packageName - the package to drop from the bundle list.
+ */
+function reconcileProfileBundles(profileDir: string, packageName: string): void {
+  const manifestPath = join(profileDir, 'package.json')
+  let manifest: Record<string, unknown>
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>
+  } catch {
+    return
+  }
+  const dsh = manifest.dsh
+  if (typeof dsh !== 'object' || dsh === null) return
+  const profile = (dsh as Record<string, unknown>).profile
+  if (typeof profile !== 'object' || profile === null) return
+  const bundles = (profile as Record<string, unknown>).bundles
+  if (!Array.isArray(bundles)) return
+  const next = bundles.filter(entry => entry !== packageName)
+  if (next.length === bundles.length) return
+  ;(profile as Record<string, unknown>).bundles = next
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+}
+
+/**
+ * Remove one direct Profile dependency with the packaged pnpm, then reconcile the bundle list.
+ *
+ * `dsh plugin --profile <name> remove <pkg>` is a thin forwarder to pnpm in the profile directory,
+ * so this performs the same mutation without the launcher — which refuses the call outright because
+ * this profile is named `desktop`.
  */
 export async function removeRecoveryPlugin(
   options: RecoveryPluginUninstallOptions,
@@ -126,8 +170,6 @@ export async function removeRecoveryPlugin(
     throw new RecoveryPluginUninstallError('recovery plugin uninstall package name is invalid')
   }
   for (const [label, value] of [
-    ['application executable', options.appExecutable],
-    ['DSH bootstrap', options.dshBootstrapPath],
     ['Profile directory', options.profileDir],
     ['Harness home', options.homeDir],
     ['Node command directory', options.nodeBinDir],
@@ -146,26 +188,37 @@ export async function removeRecoveryPlugin(
   // Do not forward the pnpm policy here. The packaged pnpm command shim adds
   // it at the actual package-manager boundary; forwarding it too makes pnpm
   // parse the numeric option as an array and produces an invalid cutoff date.
-  const args = [
-    '--expose-internals',
-    options.dshBootstrapPath,
-    'plugin',
-    '--profile',
-    options.profileName,
-    'remove',
-    options.packageName,
-  ] as const
   return await new Promise<RecoveryPluginUninstallResult>((resolve, reject) => {
-    execFile(options.appExecutable, args, {
+    execFile(PNPM_COMMAND, ['remove', options.packageName], {
       cwd: options.profileDir,
       encoding: 'utf8',
       env: recoveryPluginEnvironment(options),
       maxBuffer,
       timeout: timeoutMs,
       windowsHide: true,
+      // The packaged pnpm is a `.cmd` shim on Windows, which CreateProcess cannot launch directly.
+      // `packageName` was checked against PACKAGE_NAME_PATTERN above, so no shell metacharacter can
+      // reach the command line.
+      shell: process.platform === 'win32',
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     }, (cause, stdout, stderr) => {
       if (cause === null) {
+        try {
+          reconcileProfileBundles(options.profileDir, options.packageName)
+        } catch (reconcileCause) {
+          reject(new RecoveryPluginUninstallError(
+            `pnpm removed ${options.packageName} but its profile bundle entry could not be dropped`,
+            {
+              packageName: options.packageName,
+              profileName: options.profileName,
+              exitCode: 0,
+              signal: null,
+              stdout,
+              stderr: `${stderr}\n${String(reconcileCause)}`,
+            },
+          ))
+          return
+        }
         resolve({
           packageName: options.packageName,
           profileName: options.profileName,
@@ -176,7 +229,7 @@ export async function removeRecoveryPlugin(
         return
       }
       reject(new RecoveryPluginUninstallError(
-        `dsh plugin remove exited unsuccessfully (code=${String(cause.code)}, signal=${String(cause.signal)})`,
+        `pnpm remove exited unsuccessfully (code=${String(cause.code)}, signal=${String(cause.signal)})`,
         {
           packageName: options.packageName,
           profileName: options.profileName,

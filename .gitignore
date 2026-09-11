@@ -21,6 +21,9 @@ teacher/**/dist/
 # build-teacher-runtime.mjs, so it is not tracked — matching the sibling teacher packages, which
 # carry no build output at all.
 teacher/packages/*/lib/
+# Recorded eval sessions: `record.mjs` writes a throwaway DSH home per case, and a real run's log
+# is an artifact of that machine's provider, not repository content.
+teacher/evals/**/.runs/
 teacher/**/*.tgz
 teacher/legacy/node_modules/
 

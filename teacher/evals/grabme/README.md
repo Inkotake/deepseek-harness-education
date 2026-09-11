@@ -64,9 +64,9 @@ DSH 会话里跑一遍完整对话。多数 case 带真实记忆（年级、教�
 
 ## Runner：怎么跑
 
-Runner 已经实现，落在 `teacher/evals/grabme/`（`run.mjs` / `score.mjs` / `lib/` / `tests/`）。
-**它评的是已经录下来的会话：不自己起 session，也不调用模型。** 一次跑批要先把 case 各跑成
-一份真实会话（这一步的驱动程序仍未实现，见文末），再把 runner 指向那些会话。
+Runner 已经实现，落在 `teacher/evals/grabme/`（`run.mjs` / `score.mjs` / `record.mjs` / `lib/` / `tests/`）。
+**它评的是已经录下来的会话：不自己起 session，也不调用模型。** 录制那一步由 `record.mjs` 负责，
+它起的是真实 Host 会话（见下），再把 runner 指向录出来的日志。
 
 ```sh
 # 一次跑完一个跑批目录（目录树里每个 session 目录取代号最高的世代）
@@ -137,12 +137,35 @@ Rate `< 2%`、Median clarification rounds `≤ 1`、Time to First Useful Artifac
 5. **只有「一次跑完」一种报告模式。** README 要求的「整套连续跑 + 逐条隔离跑」两组数字还
    没有：runner 评的是给定的会话集合，隔离与串联是录制阶段的事。
 
+### 录制：把一条 case 跑成真实会话
+
+```sh
+# 先看清楚它会跑什么（不需要任何凭据）
+node teacher/evals/grabme/record.mjs <case-id> --dry-run
+
+# 真的跑一条：起真实 Host 会话，跑完把日志位置打出来，并给出评分命令
+node teacher/evals/grabme/record.mjs <case-id>
+```
+
+`record.mjs` 用发布出来的 `dsh --profile headless "<task>"`（"answer one task, print the result,
+and exit"）——这是最接近老师第一轮真实交互的形态。日志落点不是猜的：`dsh-base` 用
+`root: dshHomePath('sessions')` 挂载 `@deepseek-ai/dsh-session-persistence-jsonl`，所以会话出现在
+`<home>/sessions/<projectKey>/<sessionId>/session[.vN].jsonl[.zstd]`，默认 zstd 压缩，runner 能直接解。
+
+**没有凭据时它会大声跳过，而且不允许被误读成通过。** 它打印一段写明"NOT RUN / 这不是通过"的横幅，
+并以 **退出码 3** 结束——一个与任何真实结果都不冲突的码。任何按"有没有失败"来判断调用方，
+都不会把这次跳过当成干净的结果。
+
 ### 仍然没有实现的部分
 
-**会话驱动与录制还没有。** 没有东西按 case 起真实 DSH session、注入 `preloaded_memory`、
-把 `teacher_message` 当首条用户消息送进去、并按剧本扮演老师回答 `ask_user_question`；也没有
-原始 session 归档、可配置重复轮数与并发度的成本控制。在它落地之前，`cases.json` 的 26 条
-case 仍然需要手工或另写脚本跑成会话。
+**剧本式回答与批量录制还没有。** `record.mjs` 起真实会话、把 `teacher_message` 当首条用户消息送出，
+但它**不会扮演老师回答 `ask_user_question`**：一条 case 只跑一轮，需要多轮澄清的 case（占多数）
+目前录不到完整轨迹。同样没有的还有：把 `preloaded_memory` 注入成会话前置记忆、原始归档、
+可配置重复轮数与并发度的成本控制。在它们落地之前，26 条 case 里的多轮场景仍然需要手工或另写脚本。
+
+**本机没有跑通过一条真实会话。** 这台机器没有配置任何 provider 凭据，所以 driver 的实际执行路径
+（起 session → 写日志 → runner 打分）在这里**只验证到"会大声跳过"和 `--dry-run`**，没有验证到
+真实 provider 上的端到端结果。这一条不要当成已验证。
 
 落点说明：本次 runner 按交付要求放在 `teacher/evals/grabme/`（与 `cases.json`、`metrics.md`
 同目录），没有放进 `teacher/scripts/`；`deepseek-harness/` 内没有任何改动，`cases.json` 也

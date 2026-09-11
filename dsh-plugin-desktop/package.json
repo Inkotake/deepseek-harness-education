@@ -361,6 +361,7 @@
       "cordis.patch.yml",
       "lib/**",
       "package.json",
+      "presets/**",
       "!node_modules/node-pty/build/**"
     ],
     "mac": {

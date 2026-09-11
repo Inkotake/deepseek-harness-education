@@ -1,116 +1,111 @@
 {
   "name": "teacher-publish-providers.lock",
   "version": "0.1.0",
-  "policy": "Provider must come from this reviewed registry. Never discover random hosting sites at runtime.",
-  "candidates": [
+  "policy": "The registry lives only in publish-cli/config/providers.json. This file is generated from it; never edit by hand.",
+  "generatedFrom": "teacher/packages/publish-cli/config/providers.json",
+  "snapshot": null,
+  "regionProfile": null,
+  "quickSharePriority": [],
+  "tunnelPriority": [],
+  "providers": [
     {
       "id": "ship-page",
       "enabled": true,
-      "priority_cn": 10,
-      "type": "static-upload",
-      "auth": "none",
-      "docs": "https://ship.page/docs/agents",
-      "artifact_host": "*.shipped.run",
-      "tested_at": null,
-      "status": "pending-cn-test"
-    },
-    {
-      "id": "netlify-anonymous",
-      "enabled": true,
-      "priority_cn": 20,
-      "type": "static-upload",
-      "auth": "anonymous",
-      "docs": "https://docs.netlify.com/deploy/create-deploys/",
-      "artifact_host": "*.netlify.app",
-      "tested_at": null,
-      "status": "fallback"
-    },
-    {
-      "id": "hurl-page",
-      "enabled": false,
-      "priority_cn": 30,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
-    },
-    {
-      "id": "pagedrop",
-      "enabled": false,
-      "priority_cn": 31,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
-    },
-    {
-      "id": "freekit",
-      "enabled": false,
-      "priority_cn": 32,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 100
     },
     {
       "id": "shipstatic",
-      "enabled": false,
-      "priority_cn": 33,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 90
     },
     {
       "id": "aft-page",
-      "enabled": false,
-      "priority_cn": 34,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
-    },
-    {
-      "id": "dropley",
-      "enabled": false,
-      "priority_cn": 35,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 80
     },
     {
       "id": "here-now",
-      "enabled": false,
-      "priority_cn": 36,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 70
+    },
+    {
+      "id": "show",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 60
+    },
+    {
+      "id": "dropley",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 50
     },
     {
       "id": "wh-drop",
       "enabled": false,
-      "priority_cn": 37,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": "no-public-service-found",
+      "priority": 0
     },
     {
-      "id": "show",
-      "enabled": false,
-      "priority_cn": 38,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "id": "netlify",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 40
     },
     {
-      "id": "shipsite",
-      "enabled": false,
-      "priority_cn": 39,
-      "type": "static-upload",
-      "auth": "none",
-      "status": "candidate"
+      "id": "cloudflare-pages",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 60
+    },
+    {
+      "id": "vercel",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 40
+    },
+    {
+      "id": "github-pages",
+      "enabled": true,
+      "kind": null,
+      "anonymous": null,
+      "observedAnonymousLifetime": null,
+      "disabledReason": null,
+      "priority": 30
     }
-  ],
-  "tunnels_fallback": [
-    { "id": "expose", "enabled": false },
-    { "id": "localhost-run", "enabled": false },
-    { "id": "pinggy", "enabled": false },
-    { "id": "cloudflare-quick-tunnel", "enabled": false },
-    { "id": "localtunnel", "enabled": false }
   ]
 }

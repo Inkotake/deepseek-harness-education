@@ -6,9 +6,9 @@ Thank you for wanting to contribute to DSH Desktop. This is a community project 
 
 - Report problems or odd behavior in an [issue](https://github.com/anywhere-labs/deepseek-harness-desktop/issues): include your operating system (macOS / Windows), application version, and reproduction steps.
 - Feature ideas and improvement suggestions are welcome as issues too.
-- Join the [community channels](README.en.md#community) (WeChat group, QQ group, Discord) and help other users.
+- Join the [upstream DSH Desktop community channels](https://github.com/anywhere-labs/dsh-desktop) (WeChat group, QQ group, Discord) and help other users.
 - Write tutorials or experience posts, or help improve and translate the documentation.
-- Suggest ecosystem projects for the [related links](README.en.md#friendly-links) section.
+- Suggest ecosystem projects for the upstream project's related-links section.
 
 ## Plugin authors: extend the ecosystem
 

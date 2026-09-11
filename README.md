@@ -1,240 +1,299 @@
-<p align="center">
-  <a href="https://dshdesktop.cn"><img src="assets/desktop-hero-zh.png" alt="DSH Desktop：基于 DeepSeek Harness 构建的开源桌面客户端" width="100%"></a>
-</p>
+# Teacher DSH 0.1
 
-<h1 align="center">DSH Desktop</h1>
+English | [中文](README.zh.md)
 
-<p align="center">
-  <strong>基于 DeepSeek Harness 构建的 Windows 和 macOS 开源桌面客户端。</strong>
-</p>
+Teacher DSH 0.1 is a complete, offline teacher toolchain distributed as a Windows application. A
+teacher installs one thing — or unzips one archive — and can generate teaching resources, generate
+interactive HTML teaching aids, and publish a page. No Node.js, no pnpm, and no Git need to be
+installed, and nothing is downloaded on first run.
 
-<h3 align="center"><a href="https://dshdesktop.cn">一键下载，开箱即用。</a></h3>
+The distribution is built around two upstream projects: the Electron desktop shell from
+`anywhere-labs/dsh-desktop` and a pinned DeepSeek Harness runtime. The Harness is used unmodified;
+this repository adds the runtime that goes with it, the teaching Skills, the teaching-aid
+templates, the presentation and publishing toolchains, and the Windows packaging.
 
-<p align="center">
-  万物皆「插件」，桌面本身也是「插件」。
-</p>
+| | |
+|---|---|
+| Version | `0.1.0` |
+| Platform | Windows x64 |
+| Release artifacts | `Teacher-DSH-0.1.0-x64-Setup.exe` (NSIS), `Teacher-DSH-0.1.0-x64-Portable.zip` |
+| Teacher layer license | MIT |
+| Bundled third-party components | their own licenses — see [License and attribution](#license-and-attribution) |
 
-<p align="center"><sub>独立的社区开源项目，与深度求索不存在隶属、合作、授权或背书关系。<br>本仓库目前无深度求索员工或 DeepSeek Harness 上游官方团队成员参与；GitHub Contributors 中显示的上游贡献者来自 fork 继承和同步的提交历史。<br>中文 · <a href="README.en.md">English</a></sub></p>
+This is a community distribution. It is not affiliated with, authorized by, or endorsed by DeepSeek
+or Anywhere Labs.
 
-<p align="center">
-  <img src="assets/desktop-chat-zh.png" alt="DSH Desktop 中文对话界面" width="100%">
-</p>
+## What is included in 0.1
 
-<p align="center">
-  <a href="https://github.com/anywhere-labs/deepseek-harness-desktop/releases/latest"><img src="https://img.shields.io/github/v/release/anywhere-labs/deepseek-harness-desktop?style=flat&amp;label=release&amp;color=4D6BFE" alt="Latest release"></a>
-  <a href="https://github.com/anywhere-labs/deepseek-harness-desktop/releases"><img src="https://img.shields.io/github/downloads/anywhere-labs/deepseek-harness-desktop/total?style=flat&amp;label=downloads&amp;color=4D6BFE" alt="Total downloads"></a>
-  <a href="https://github.com/anywhere-labs/deepseek-harness-desktop"><img src="https://img.shields.io/github/stars/anywhere-labs/deepseek-harness-desktop?style=flat&amp;label=%E2%98%85&amp;color=08C" alt="GitHub stars"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2EA44F?style=flat" alt="MIT License"></a>
-  <a href="https://discord.gg/TJeGqKRNM"><img src="https://img.shields.io/badge/Discord-5865F2?style=flat&amp;logo=discord&amp;logoColor=white" alt="Join Discord"></a>
-  <img src="https://img.shields.io/badge/macOS%20%7C%20Windows-4493F8?style=flat-square" alt="Supported platforms: macOS and Windows">
-</p>
+Everything below ships inside the installer or the Portable archive. The versions are recorded in
+[`teacher/manifests/`](teacher/manifests) and in the generated
+`resources/teacher-runtime/manifests/runtime.build.json`.
 
-DSH Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的本地 Web UI、Host 服务和插件系统集成到原生桌面应用中。项目固定并原样运行特定上游版本；DSH Desktop 提供窗口、托盘、终端、更新和工作配置，并通过 DeepSeek Harness 提供的插件机制与上游能力组合。
+| Component | Version | Role |
+|---|---|---|
+| Desktop shell (upstream baseline) | v2.0.5 | Electron shell, profile manager, packaging pipeline |
+| DeepSeek Harness | 0.1.2-rc.1 | Pinned agent runtime, plugin loader, client UI, tool protocol |
+| Node.js | 22.23.2 | Portable runtime used by every Teacher command |
+| pnpm | 11.8.0 | Package manager for artifact projects |
+| Vite | 8.2.2 | Teaching-aid build |
+| Three.js | 0.186.0 | 3D teaching aids |
+| JSXGraph | 1.13.3 | Interactive geometry and function graphs |
+| KaTeX | 0.18.7 | Formula rendering |
+| ECharts | 6.1.0 | Charts |
+| Mermaid | 12.0.0 | Diagrams |
+| Matter.js | 0.20.0 | 2D physics |
+| PptxGenJS | 4.0.1 | Editable `.pptx` output, wrapped by `@teacher-dsh/ppt-kit` 0.1.0 |
+| `@teacher-dsh/artifact-sdk` | 0.1.0 | Stage, UI, and formula API for teaching aids |
+| netlify-cli / wrangler / vercel | 27.5.2 / 4.130.0 / 59.15.1 | Account-owned publishing |
 
-<a id="run"></a>
+Command-line tools in the package:
 
-## 下载与安装
+| Command | What it does |
+|---|---|
+| `teacher-artifact` | `init` / `build` / `check` / `preview` / `pack` a teaching aid from the bundled dependency tree |
+| `teacher-latex` | Author `.tex` sources and validate their structure; render formulas with KaTeX |
+| `teacher-ppt` | `init` / `build` / `check` a teaching deck; produces editable OOXML |
+| `teacher-publish` | Detect, inspect, plan, deploy, and verify a static publish |
 
-当前正式安装包支持 Windows x64 和 macOS Universal。无需额外环境，下载安装，一键使用。
+Seven teaching-aid templates are bundled: `basic`, `three`, `math`, `physics-2d`, `chart`,
+`diagram`, and `classroom-game`.
 
-| 平台 | 下载 | 安装方式 |
-| --- | --- | --- |
-| Windows x64 | [下载安装程序](https://www.dshdesktop.cn/api/downloads/windows) | 运行 NSIS 安装程序并按提示完成安装 |
-| macOS Universal | [下载 DMG](https://www.dshdesktop.cn/api/downloads/mac) | 打开 DMG，将 DSH Desktop 拖入 Applications |
+Twelve Skills ship in the package and are discovered through `DSH_BUNDLED_SKILL_DIR`, so they work
+with no configuration. Three are maintained here: `teaching-aid`, `publish-static`, and
+`latex-authoring`. The rest are vendored: seven education Skills by Gareth Manning,
+`pptkit-presentation`, and `web-design-guidelines`.
 
-详细步骤、插件命令和故障排查见[用户指南](docs/user-guide.md)与[常见问题](docs/faq.md)。
+Three vendor plugins are preinstalled into the desktop profile of the bundled Harness home:
 
-我们希望和所有插件作者一起，构建一个开放、可组合、可持续的 DSH 插件生态，让每个插件都能与其他插件共同进步：[DSH 插件生态倡议书](docs/plugin-ecosystem.md)。
+| Plugin | Version |
+|---|---|
+| `dsh-better-sidebar` | 0.18.1 |
+| `@dsh-cowork/plugin` | 0.1.0 |
+| `dsh-plugin-pptkit-presentation` | 0.1.0 |
 
-<details open>
-<summary>❤️ 赞助商</summary>
+## What is not in 0.1
 
-| Logo | 简介 |
-| --- | --- |
-| <a href="https://dshdesktop.cn/sponsors/wuying"><img src="assets/sponsors/wuying-cloud-computer-logo.png" alt="阿里云无影云电脑" width="96"></a> | [**阿里云 · 无影云电脑**](https://dshdesktop.cn/sponsors/wuying)<br>感谢 **阿里云** 无影云电脑赞助本项目！无影云电脑个人版面向个人用户提供云上电脑服务，将计算、存储和桌面环境放在云端，支持在多类终端上接入使用，并可按需选择不同规格，适合远程办公、学习、开发和轻量创作等场景。<br><br>[**打开微信注册 →**](https://dshdesktop.cn/sponsors/wuying) |
-| <a href="https://www.ucloud.cn/site/active/astraflow?ytag=geo_waituo_dsh"><img src="assets/sponsors/astraflow-logo.png" alt="UCloud 星图 AstraFlow" width="96"></a> | [**UCloud · 星图 AstraFlow**](https://www.ucloud.cn/site/active/astraflow?ytag=geo_waituo_dsh)<br>感谢 **UCloud** 星图 AstraFlow 大模型赞助了本项目！优刻得 **UCloud** 星图 AstraFlow 大模型，支持 200+ 模型一键调用：内置 Kimi K3、DeepSeek V4/V3、Qwen 3、GLM5.2、happyhorse 等全球领先开源大模型，无需自训，开箱即用。<br><br>[**访问官网 →**](https://www.ucloud.cn/site/active/astraflow?ytag=geo_waituo_dsh) |
-| <a href="https://88api.ai/sign-up?aff=VnEb"><img src="assets/sponsors/88api-logo.png" alt="88API" width="120"></a> | [**88API**](https://88api.ai/sign-up?aff=VnEb)<br>88API 是一站式多模型 API 聚合平台，平台由海外企业运营，稳定高效支持开票。平台提供 DeepSeek 官转和开源渠道，价格低至 5 折，完美适配 DSH Desktop 项目。一个 API Key 即可统一接入海内外多种模型，覆盖文本对话、图片、音频、音乐和视频生成接口，适用于 AI 编程、Agent 自动化、内容创作及应用开发。<br><br>[**立即注册 →**](https://88api.ai/sign-up?aff=VnEb) |
+Stated plainly, because these limits are part of the contract:
 
-</details>
+- **No OCR.** No image or scanned-document text extraction is bundled.
+- **No Python.** There is no Python interpreter and no scientific Python stack.
+- **No TeX distribution.** KaTeX 0.18.7 renders formulas, and `teacher-latex` authors and
+  structurally validates `.tex` sources, but there is no `pdflatex`, `xelatex`, `tectonic`, or TeX
+  Live — and therefore no TeX-to-PDF engine. 0.1 produces HTML and PPTX, not compiled PDFs.
+- **No LMS integration.** Nothing connects to a school learning-management system.
+- **No professional exam typesetting.** The LaTeX work here is math authoring for teaching
+  material, not examination paper production.
 
-## 文档
+## How a teacher uses it
 
-普通用户从[用户指南](docs/user-guide.md)开始即可；开发者文档只在需要扩展或维护时才需要阅读。
+1. Run `Teacher-DSH-0.1.0-x64-Setup.exe`, or unzip `Teacher-DSH-0.1.0-x64-Portable.zip` and start
+   the application from the extracted folder.
+2. Double-click. The DeepSeek Harness opens. The bundled Harness home is copied into the user's
+   Harness directory on first run, and only when the `desktop` profile does not exist yet, so
+   existing user data is never overwritten.
+3. Configure the model in the Harness's own settings UI.
+4. Describe the teaching material you want in the chat box.
 
-### 用户文档
+The machine's `PATH`, `NODE_HOME`, and global npm prefix are never modified: the command shims are
+generated into a per-user state directory and prepended to the Harness process only. The artifact
+toolchain is linked into a workspace through a Windows junction, so `init`, `build`, and `check`
+are offline and take seconds.
 
-| 目标 | 入口 |
-| --- | --- |
-| 安装和日常使用 | [用户指南](docs/user-guide.md) |
-| 快速确认平台、环境和使用边界 | [常见问题](docs/faq.md) |
-| 了解数据处理与隐私选择 | [隐私政策](PRIVACY.zh.md) |
-| 了解项目为什么存在 | [为什么做 DSH Desktop](docs/why-desktop.md) |
-| 查看全部文档与 README 分工 | [文档索引](docs/README.md) |
+### The eight example tasks
 
-### 开发者与维护者文档
+| # | Prompt | Expected outcome |
+|---|---|---|
+| 1 | 做一个三维太阳系教学教具 | A runnable 3D page built from the `three` template, with orbit and camera interaction |
+| 2 | 做一个可调整 a、b、c 的二次函数演示 | A `math` aid in which sliders for `a`, `b`, `c` redraw a JSXGraph parabola while KaTeX typesets the formula |
+| 3 | 做一个二维碰撞实验 | A `physics-2d` aid that simulates collisions with Matter.js in the browser |
+| 4 | 做一个班级成绩分布交互图 | A `chart` aid that renders an offline interactive distribution chart with ECharts |
+| 5 | 根据这份材料生成教学 PPT | `teacher-ppt` builds an editable `.pptx` deck from the supplied material |
+| 6 | 帮我设计一节课 | The education Skills produce a structured single-lesson plan |
+| 7 | 把这个教具发到网上 | `teacher-publish` uploads the built aid, verifies it remotely, and returns a working URL |
+| 8 | 讲一下这个公式 | The formula is explained and rendered with KaTeX, and can be embedded in an aid or a slide |
 
-| 目标 | 入口 |
-| --- | --- |
-| 阅读插件生态倡议书 | [插件生态倡议书](docs/plugin-ecosystem.md) |
-| 编写普通或 Desktop 插件 | [插件开发](docs/plugin-development.md) |
-| 参与统一插件 contract 讨论 | [DSH Community Fabric Draft](dsh-community-fabric/README.zh.md) |
-| 了解统一插件框架为什么这样设计 | [成熟框架与真实插件调研](dsh-community-fabric/docs/research/mature-plugin-frameworks.zh.md) |
-| 查看插件市场的产品与安全设计 | [DSH Community Market](dsh-community-market/README.zh.md) |
-| 了解桌面插件可以使用的能力 | [桌面插件接口说明](dsh-plugin-desktop/docs/plugin-services.zh.md) |
-| 了解桌面应用如何工作 | [架构说明](docs/architecture.md) |
-| 查阅包级构建与发布细节 | [`dsh-plugin-desktop/README.md`](dsh-plugin-desktop/README.md) |
+## Publishing a teaching aid
 
-## 主要功能
+`teacher-publish` is the only component allowed to talk to a hosting service, and every provider
+protocol is implemented in process or driven through a bundled CLI. The flow is:
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>Desktop</h3>
-      <p>把上游 DeepSeek Harness 的本地 Web UI 带到原生桌面。应用自动启动和管理本地 Harness 服务，集成系统托盘与桌面窗口，无需安装 Node.js 或执行命令。</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>手机远程控制 <img src="https://img.shields.io/badge/%E5%8D%B3%E5%B0%86%E6%8E%A8%E5%87%BA-F59E0B?style=flat-square" alt="即将推出"></h3>
-      <p>通过 iOS 和 Android 远程连接 Desktop，在手机上发起任务、查看 Agent 进度，并在需要时继续跟进。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3><a href="dsh-community-market/README.zh.md">插件市场</a> <img src="https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-2EA44F?style=flat-square" alt="已内置"></h3>
-      <p>DSH Community Market 已完成并内置，提供插件发现、详情、安装与管理。市场以开放方式连接各种插件数据源：任何人都可以提供、接入和使用符合公开 Schema 的来源，已有 API 也可以通过受审 adapter 加入合作数据源。</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>共建插件生态</h3>
-      <p>DSH 的插件生态由社区共同建设。上游插件、DSH Desktop 插件和其他社区插件遵循统一的约定，可以通过相同的组合机制共同工作；欢迎加入共建，详见 <a href="docs/plugin-ecosystem.md">DSH 插件生态倡议书</a>。</p>
-    </td>
-  </tr>
-</table>
+1. **Detect** the built static artifact (`dist`, `build`, `public`, `out`, or a directory holding
+   `index.html`).
+2. **Inspect** it: a byte-level manifest plus a safety scan that hard-blocks credentials, keys, and
+   class data. Nothing is uploaded while a hard block is present.
+3. **Plan** by ranking the providers from the reviewed registry in
+   [`teacher/packages/publish-cli/config/providers.json`](teacher/packages/publish-cli/config/providers.json)
+   for the requested mode, filtering by capability before any upload is attempted. The plan
+   contacts no provider.
+4. **Deploy** through the highest-ranked eligible provider.
+5. **Verify** — this is the contract that matters. An HTTP 2xx from an upload is only a *candidate*
+   success. `deploy` reports `success: true` only after every deployed resource has been fetched
+   back over HTTPS and its SHA-256 compared with the local manifest. A deployment whose
+   verification cannot run is reported as failed, never as a success.
 
-### 首次设置、浏览器与局域网访问
+Three modes exist: `quick-share` (anonymous temporary hosts), `persistent` (account-owned hosts,
+which are never silently downgraded to a temporary host), and `tunnel` (session-only exposure of
+localhost through a tunnel CLI that must already be installed).
 
-每个尚未初始化的 profile 正常首次启动时，会先显示由 Desktop 自己提供的原生 Setup Wizard。它可以设置窗口模式与系统材质、插件市场、通知、是否用系统默认浏览器自动打开，以及 Web 访问范围；也可以直接跳过。向导完成或跳过以前，Host 和主 DSH 窗口都不会启动。完成或跳过状态按 profile 分别记录；显式恢复启动仍优先进入恢复助手。
+The registry currently holds eleven providers: six anonymous, four account-owned, and one —
+`wh-drop` — disabled because no public service could be located for it.
 
-Web 服务默认仅监听本机回环地址。开启“用浏览器打开”后，Desktop 会在 Web 服务实际就绪时交给系统默认浏览器打开；这个选项不会改变网络暴露范围。“桌面设置”会在选项下显示实际的本机 URL。局域网访问是一个独立的可选设置，开启后还会显示当前可用的局域网 URL。
+- CLI reference: [`teacher/packages/publish-cli/README.md`](teacher/packages/publish-cli/README.md)
+- Protocol reference: [`teacher/packages/publish-cli/docs/provider-protocols.md`](teacher/packages/publish-cli/docs/provider-protocols.md)
 
-> **危险：** 向局域网开放不提供鉴权；所有与你处于同一局域网的人都能直接打开 DSH 并操作你的电脑。请只在完全信任的网络中谨慎开启。
+## Repository layout
 
-自动更新的固定版本检查请求会在 `X-DSH-Desktop-Version` header 中携带当前安装版本，在 `X-DSH-Desktop-Channel` 中携带 `stable` 或 `beta`，并在 `X-DSH-Desktop-Installation-Id` header 中携带一个由本机生成并持久保存的随机 UUID；它不是从硬件信息推导出的标识。安装包下载会携带通道和 `X-DSH-Desktop-Target-Version`，但下载请求及其重定向不会携带安装标识或当前版本。
-
-## 插件生态
-
-插件是给 DSH 添加能力的扩展包——模型、工具、界面、工作流都可以做成插件，像搭积木一样自由组合。
-
-DSH Desktop 没有修改上游源码，也不是一个固定写死的外壳。固定版本的上游 DeepSeek Harness 原样运行；桌面壳本身——窗口、托盘、终端、更新、工作配置——作为 DSH 插件接入，并通过 DeepSeek Harness 提供的插件机制与上游能力组合进同一个运行时。从核心 agent 到桌面外壳，整个产品遵守同一条"一切皆插件"的规则：与所固定上游版本兼容的插件可以使用，桌面能力也按插件的方式组合、替换和演进。
-
-我们希望插件生态像手机应用一样：每个插件按同一套规则开发，装在一起也能一起工作、互不干扰。
-
-### 给开发者
-
-与许多其他项目不同，这个项目本身就是一个 DSH [插件](docs/plugin-development.md)：桌面壳与第三方插件使用相同的插件组合机制。Desktop 的插件能力已经可以使用。我们提供了 Desktop 服务，让插件开发者能够把插件与桌面能力集成起来：例如查看和切换工作配置，或在当前配置中安装、更新和移除插件。完整用法见[桌面插件接口说明](dsh-plugin-desktop/docs/plugin-services.zh.md)。为什么选择这样的边界、哪些能力不会暴露给第三方插件，见[为什么做 DSH Desktop](docs/why-desktop.md)和[插件开发指南](docs/plugin-development.md)。
-
-## 与 DeepSeek Harness 的关系
-
-DSH Desktop 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 和 Cordis 插件思想构建的独立社区项目，旨在提供开放、可组合的 DSH 桌面体验。
-
-本仓库由社区独立维护，目前不存在深度求索员工或 DeepSeek Harness 上游官方团队成员参与本项目开发、维护或治理的情形。GitHub Contributors 页面中可能出现的上游贡献者，来自本仓库 fork 时继承及后续同步的上游提交历史；该署名仅反映提交来源，不代表相关人员参与本仓库，也不构成任何隶属、合作、授权或背书关系。
-
-上游项目提供核心的智能体能力、插件系统和 Web UI；DSH Desktop 主要负责：
-
-- 桌面应用封装
-- 本地服务的启动、停止与恢复
-- 桌面窗口和系统托盘集成
-- macOS、Windows 安装包构建与发布
-- 更适合桌面使用的界面体验
-
-如果你希望通过命令行运行 DeepSeek Harness，或者参与其核心功能开发，请优先查看上游仓库。
-
-## 特别感谢
-
-特别感谢 [DeepSeek Harness 原始仓库](https://github.com/deepseek-ai/deepseek-harness) 和 DeepSeek AI 团队。DSH Desktop 基于固定版本的上游源码构建，核心的智能体、模型、工具、会话、Web UI 和插件生态都来自这个项目。
-
-同时感谢 [Cordis](https://github.com/cordiverse/cordis) 项目提供的插件化基础。没有这些开源项目，就不会有 DSH Desktop。
-
-也感谢 [Koishi.js](https://koishi.chat/) 项目和社区长期积累的插件化实践、工具与经验，以及所有参与讨论、测试、反馈和插件开发的社区成员。
-
-以及每一个使用、支持和参与共建的你。
-
-<a id="run-from-source"></a>
-
-## 开发
-
-稳定版与 Beta 桌面包分别位于 `dsh-plugin-desktop/` 和 `dsh-plugin-desktop-beta/`。外层仓库使用 Yarn，固定的 `deepseek-harness/` 子模块继续使用自己的 pnpm workspace。从仓库根目录执行：
-
-```sh
-git submodule update --init --recursive
-corepack yarn install --immutable
-corepack yarn dev
+```
+dsh-plugin-desktop/       Electron shell, Teacher runtime injection, and electron-builder packaging
+deepseek-harness/         Pinned upstream DeepSeek Harness submodule (read-only)
+teacher/                  The Teacher layer: packages, skills, templates, vendor-skills, manifests, BUILD.md
+resources/teacher-seed/   Vendored plugin sources and their prebuilt, installable trees
+scripts/teacher/          Build, seed, prune, notice, vendoring, and verification scripts
+licenses/                 Verbatim license texts for everything in the shipped payload
+THIRD_PARTY_NOTICES.md    Generated inventory of bundled components and npm dependencies
 ```
 
-headless 检查使用 `corepack yarn check`；完整的构建、测试和发布边界见[架构说明](docs/architecture.md)和包级 [`README`](dsh-plugin-desktop/README.md)。如何参与贡献见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+Supporting entries: `dsh-plugin-desktop-beta/` is the beta channel of the same desktop package;
+`dsh-community-market/` and `dsh-community-fabric/` are the desktop's plugin market and its
+community interoperability documentation scaffold; `docs/` is the desktop documentation index;
+`tests/` holds the artifact and presentation smoke suites; `.github/workflows/` holds the release
+pipeline.
 
-## 社区交流
+`resources/dsh-runtime/` and `resources/teacher-runtime/` are **build outputs and are not
+committed**. They are produced by the scripts below and enter the installer through
+electron-builder's `extraResources`. `dsh-plugin-desktop/dist/` is likewise a build output.
 
-可选择常用的平台参与讨论，交流使用问题、插件开发和项目进展。
+[`teacher/BUILD.md`](teacher/BUILD.md) is the authoritative description of the build pipeline.
 
-<table>
-  <thead>
-    <tr>
-      <th align="center">企业微信</th>
-      <th align="center">QQ群</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><img src="assets/community-wechat-group.png" alt="DSH Desktop 企业微信二维码" title="扫码添加企业微信" width="180" height="180"></td>
-      <td align="center"><img src="assets/community-qq-group.jpg" alt="DSH Desktop QQ群二维码" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
+## Building from source
 
-Discord：[加入 DSH Desktop 社区](https://discord.gg/TJeGqKRNM)
+Building requires Node.js `^22.19.0` or `>=24.0.0`, Yarn 4.18.0 through Corepack, and Windows x64.
+Initialize the pinned upstream checkout first with `git submodule update --init --recursive`, then:
 
-如果您希望加入我们的技术团队，也欢迎通过 [t4wefan@qq.com](mailto:t4wefan@qq.com) 联系我们。
+```powershell
+corepack enable
+corepack yarn install --immutable
 
-## 友情链接
+# 1. Bundled runtimes: Node, pnpm, the dsh shim, the Teacher CLIs, the artifact, presentation, and
+#    deploy dependency trees, the bundled Skills, the manifests.
+node scripts/teacher/build-teacher-runtime.mjs
 
-这里收录 DeepSeek Harness 生态项目及开发者工具。
+# 2. The three vendor plugins, prebuilt.
+node scripts/teacher/build-vendor-plugins.mjs
 
-| 项目 | 简介 | 链接 |
-| --- | --- | --- |
-| dshfind | DeepSeek Harness（DSH）学习与分享社区。 | [GitHub](https://github.com/hikariming/dshfind) · [官网](https://dshfind.com) |
-| DSH 1024Store | 面向 DeepSeek Harness（dsh）生态的社区插件目录（收录 4120 个插件），并开源了在线插件市场、目录流水线与公开查询 API，可 fork 自建市场。 | [GitHub](https://github.com/imsai-sh/awesome-deepseek-harness-plugins) |
-| Awesome DSH Plugin | DeepSeek Harness（DSH）插件精选列表。 | [GitHub](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) |
-| dsh-market | DeepSeek Harness 内的可视化插件市场，支持浏览、搜索与一键安装插件。 | [GitHub](https://github.com/dsh-market/dsh-market) |
-| ModLens | 为 DeepSeek Harness 和纯文本 Coding Agent 提供 OCR、版面与语义识别能力。 | [GitHub](https://github.com/liustack/modlens) · [官网](https://liustack.dev) |
-| DeepSeek Harness 橙皮书 | DeepSeek Harness 社区实测手册。 | [GitHub](https://github.com/alchaincyf/deepseek-harness-orange-book) |
-| dsh-web-ui | DeepSeek Harness Web UI 插件与皮肤合集。 | [GitHub](https://github.com/zhu1090093659/dsh-web-ui) · [展示站](https://gallery.dsh-market.com) |
-| dsh-TUI | DeepSeek Harness 全屏交互式终端界面。 | [GitHub](https://github.com/ccch1mneyyy/dsh-TUI) |
-| dsh-tianshu-tui | DSH Web 端交互式终端极简风格 UI 插件，自研 ANSI 渲染核心、极致丝滑流畅；在官方基础上增加了 TDD、证据门、视觉图像模块等工作流。 | [GitHub](https://github.com/huiliyi37/dsh-tianshu-tui) |
-| dsh-context | DSH 上下文洞察面板：Context 仪表盘 + /context 命令 + Context 浏览器，一站式查看 Context 的分类组成、内容详情、演进趋势、压缩/注入事件与统计，覆盖 Context 全生命周期管理。 | [GitHub](https://github.com/bowenliang123/dsh-context) · [NPM](https://www.npmjs.com/package/dsh-context) |
-| Agents-Anywhere | 从手机远程控制电脑上的 Coding Agent。 | [GitHub](https://github.com/anywhere-labs/Agents-Anywhere) |
-| deepseek-harness-remote | 基于 P2P 与 APIProxy 的 DeepSeek Harness 远程控制与多端协同插件。 | [GitHub](https://github.com/liguobao/deepseek-harness-remote) |
-| DSH-better-sidebar | DeepSeek Harness 侧边栏工作台，集成文件、终端、Git 和子代理。 | [GitHub](https://github.com/omdsh-dev/DSH-better-sidebar) |
-| Awesome DeepSeek Harness | DeepSeek Harness 插件、工具与基础设施精选列表。 | [GitHub](https://github.com/0xsline/awesome-deepseek-harness) · [官网](https://deepseekdocs.com/) |
-| 深求社区（DeepSeek.club） | 全球最大的第三方 DeepSeek 开源生态社区，聚合模型库、应用榜、Harness 插件库与 Harness 学院，一站式服务开发者，研究者与企业用户。 | [官网](https://deepseek.club) |
-| MkSaaS · TanStarter | 面向独立开发者的商业 SaaS 启动模板。MkSaaS 基于 Next.js，TanStarter 基于 TanStack Start 与 Cloudflare，内置 AI、认证、支付和后台等常用能力。 | [MkSaaS](https://mksaas.com) · [TanStarter](https://tanstarter.dev) |
+# 3. The desktop package must be built before the profile seed can be composed.
+corepack yarn workspace dsh-plugin-desktop build
 
-<sub>如果希望收录您的项目，欢迎加入微信群并私信 @王博升Benson，或联系 t4wefan@qq.com，或<a href="https://github.com/anywhere-labs/deepseek-harness-desktop/issues">提出 issue</a>。</sub>
+# 4. The bundled Harness profile seed: a desktop profile with every plugin already installed.
+node scripts/teacher/build-profile-seed.mjs
 
-## License
+# 5. License inventory and notices for the shipped payload.
+node scripts/teacher/build-notices.mjs
 
-本项目遵循 [MIT License](LICENSE)。
+# 6. Windows Setup (NSIS) and Portable (ZIP).
+$env:DSH_PACKAGE_CHECK_ALREADY_RAN = '1'
+corepack yarn workspace dsh-plugin-desktop dist:win
+corepack yarn workspace dsh-plugin-desktop dist:win-portable
 
-> “DeepSeek Harness”是深度求索公司的注册商标。本文仅为准确说明兼容性、技术来源及与上游软件的关系而使用该名称。
+# 7. Prove the packaged payload works, then prove the Portable archive does.
+node scripts/teacher/smoke-package.mjs
+node scripts/teacher/smoke-portable.mjs --archive dsh-plugin-desktop/dist/*Portable*.zip
+```
 
-> 本项目完全开源免费。如果有人向您以任何形式出售此软件，请拒绝交易。
+Only set `DSH_PACKAGE_CHECK_ALREADY_RAN=1` when `corepack yarn check` has already passed in the same
+workspace state: it skips the upstream preflight suite.
 
-> DSH Desktop 是独立的社区项目，与深度求索不存在隶属、合作、授权或背书关系。
+### Fast iteration without repackaging
 
-## Star History
+[`scripts/teacher/stage-dev.mjs`](scripts/teacher/stage-dev.mjs) replaces the two runtime trees
+inside an already packaged application directory with Windows directory junctions pointing back at
+`resources/`. A rebuilt CLI or Skill is then immediately visible to the packaged application, and
+`smoke-package.mjs` exercises the live tree instead of a gigabyte-sized copy.
 
-<a href="https://www.star-history.com/?repos=anywhere-labs%2Fdeepseek-harness-desktop&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&theme=dark&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
- </picture>
-</a>
+This is a local iteration aid only. **Remove those junctions before running electron-builder
+again**, so that packaging copies real files instead of following links into the repository, and
+never ship an application directory that was staged this way. The script takes `--app`, `--force`,
+and `--json`.
+
+## Verification
+
+Every gate answers a different question, and all of them run in CI.
+
+| Command | What it proves |
+|---|---|
+| `node scripts/teacher/verify-distribution.mjs` | The manifests and the three maintained Skills are present and consistent, then the artifact smoke tests run |
+| `node scripts/teacher/verify-skills.mjs` | Every bundled Skill is a flat directory holding a `SKILL.md` with valid frontmatter, a `name` matching its directory, and a description, with no duplicate names |
+| `node scripts/teacher/verify-plugins.mjs` | The three pinned vendor plugins agree across the manifest, the vendored checkout's `SOURCE.json`, and the prebuilt tree; a missing prebuilt tree is a warning rather than a failure |
+| `node scripts/teacher/verify-licenses.mjs` | The license inventory parses, every curated component owns a `licenses/<slug>/` directory, and `THIRD_PARTY_NOTICES.md` names each one and states the CC BY-SA share-alike terms |
+| `node scripts/teacher/verify-no-secrets.mjs` | No high-confidence credential shapes exist in the tracked tree (`git ls-files`) |
+| `node scripts/teacher/verify-profile-seed.mjs` | The seed is copied into a fresh temporary Harness home and the `desktop` profile is booted headlessly, asserting that all three vendor plugins really mount and register their tools and skill provider, with no network access |
+| `node scripts/teacher/smoke-package.mjs` | The packaged application directory works without a development environment: the in-package Node and artifact CLI initialize, build, and check a real teaching aid, and the in-package PPT CLI produces a real editable `.pptx` |
+| `node scripts/teacher/smoke-portable.mjs --archive <zip>` | The Portable archive unpacks into a payload that passes the packaged smoke |
+| `node tests/ppt/run-ppt-smoke.mjs` | The presentation toolkit builds and checks a deck |
+
+The release pipeline is
+[`.github/workflows/teacher-distribution.yml`](.github/workflows/teacher-distribution.yml), with
+three jobs: `verify` (static distribution gates), `package-windows` (build the bundled runtime,
+then electron-builder Setup and Portable), and `smoke-package` (run the packaged payload and
+produce a real teaching aid and `.pptx`). It deliberately tests whether the *installer* works, not
+whether the development sources run.
+
+## License and attribution
+
+- **The Teacher layer written in this repository is MIT.** That covers `teacher/`,
+  `scripts/teacher/`, the Teacher bootstrap and profile seed in `dsh-plugin-desktop/`, and the
+  three Skills maintained here.
+- **The root [`LICENSE`](LICENSE) is the upstream MIT license and is preserved as-is.** It belongs to
+  the upstream desktop project, not to the Teacher layer.
+- **Seven vendored education Skills by Gareth Manning are CC BY-SA 4.0** and are redistributed
+  verbatim from
+  [`GarethManning/education-agent-skills`](https://github.com/GarethManning/education-agent-skills).
+  That share-alike obligation travels with those files: any redistribution that includes them must
+  keep the same license for them and credit the original author. They are not MIT, and the rest of
+  the package being MIT does not relicense them.
+- **Every other bundled component keeps its own license**, including the DeepSeek Harness, the
+  desktop shell, Node.js, pnpm, the npm dependency trees, the two other vendored Skills, and the
+  three vendor plugins. Some are MIT; others are Apache-2.0, BSD, ISC, or another set of terms.
+
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) is the generated inventory: it lists every
+bundled component with its license and role, calls out the share-alike component explicitly, and
+enumerates the bundled npm dependencies per toolchain. [`licenses/`](licenses) holds the verbatim
+license texts. Both are produced by `scripts/teacher/build-notices.mjs` and validated by
+`verify-licenses.mjs`.
+
+## Limitations
+
+Known, current, and stated rather than hidden.
+
+- **The account-owned publishing paths are unverified.** `netlify`, `cloudflare-pages`, `vercel`,
+  and `github-pages` are implemented against their documented CLI contracts and were exercised only
+  to the unauthenticated failure path, because no provider credentials were available during
+  development. The anonymous hosts were verified live, including a real `ship.page` deployment
+  whose 62 files were all hash-verified. Do not treat a `persistent` deployment as proven until it
+  has run against a real authenticated account.
+- **Windows x64 only.** macOS and Linux packages are not produced — those electron-builder targets
+  are still `dir` — and the bundle contains Windows x64 native binaries. It will not run on another
+  platform or architecture.
+- **Size.** The current build produces a Setup installer of roughly 285 MB and a Portable ZIP of
+  roughly 510 MB. This is the largest engineering constraint of the distribution: download time, CI
+  time, and disk footprint.
+- **The Setup installer is unsigned**, so Windows shows the usual unknown-publisher warning on first
+  run.
+- **The eight example tasks have automated coverage but no formal classroom acceptance run.** The
+  templates behind them are built and checked by the packaging pipeline — the packaged smoke builds
+  a `three` aid with the in-package CLI — but the aids were not opened in a real browser during
+  validation. The generated `.pptx` is checked for editable OOXML but has not been opened in
+  PowerPoint or WPS. And the installer has not been exercised end to end on a clean Windows machine
+  or VM.
+
+## Links
+
+- This repository: <https://github.com/Inkotake/deepseek-harness-education>
+- Upstream desktop shell: <https://github.com/anywhere-labs/dsh-desktop>
+- Upstream Harness: <https://github.com/deepseek-ai/deepseek-harness>
+
+Not affiliated with DeepSeek or Anywhere Labs.
+
+---
+
+**中文文档：[`README.zh.md`](README.zh.md)** — the same document in Chinese.

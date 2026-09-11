@@ -90,14 +90,15 @@ node scripts/teacher/port-patches.mjs --check  # 只校验声明与文件是否�
 悄悄不再生效的 patch。Yarn 在 install 时应用 `patch:` resolutions，所以错的 patch 在那里
 也会失败——两道独立检查。
 
-当前保留 4 个 patch，以及它们各自为什么必须存在：
+当前保留 5 个 patch，以及它们各自为什么必须存在：
 
 | patch | 为什么必须 |
 |---|---|
 | `dsh@` | profile 插件运行器用 shell 调 pnpm，Windows 下不加 `windowsHide` 每次都会弹出控制台窗口 |
 | `dsh-web-app@` | 浏览器打开器 spawn 的是 `process.execPath`（即 Electron）。不给子进程 `ELECTRON_RUN_AS_NODE` 会**再启动一个 app 实例**而不是当 Node 跑；同时隐藏其控制台窗口 |
 | `dsh-win32-process@` | 两处 CreateProcess 只传了 `STARTF_USESTDHANDLES`，缺 `STARTF_USESHOWWINDOW` + `SW_HIDE`，控制台子进程会显示窗口 |
-| `dsh-host-directory-picker-browse@` | Windows reparse/system 目录会被 dirent 报成目录但 `stat` 失败，原逻辑只探测符号链接，于是列出了进不去的路径 |
+| `dsh-host-directory-picker-native@` | Win32 文件夹对话框在 `process.execPath` 起的子进程里跑——在我们的打包应用里那**就是 Electron**。上游假设那是普通 node，不给 `ELECTRON_RUN_AS_NODE` 子进程会当第二个 app 实例启动并立刻退出，选择器报 `worker exited before reporting a result` |
+| `dsh-host-directory-picker-browse@` | 两处：① Windows reparse/system 目录会被 dirent 报成目录但 `stat` 失败，原逻辑只探测符号链接，于是列出了进不去的路径；② 列表默认从 home 开始，改为 Windows 下从用户桌面开始，且**桌面不存在时必须回退到 home**（OneDrive 重定向、企业策略、被删掉的桌面），否则 `opendir` 抛错、面板根本打不开 |
 
 `app-builder-lib@` 与 `open@` 是第三方 patch，按我们自己选的版本钉住，不随上游漂移。
 
@@ -144,7 +145,7 @@ node scripts/teacher/port-patches.mjs --check  # 只校验声明与文件是否�
 channel            : beta（active）
 pinned Harness     : 0.1.5-rc.2 (fb2c4b9e698e)   stable 与 beta 同版本
 vendor tarballs    : 265 (build profile official)
-保留的 dsh patch   : 4
+保留的 dsh patch   : 5
 ```
 
 从 `0.1.2-rc.1` 升到 `0.1.5-rc.2` 的机械步骤已经验证可跑，patch 也已用

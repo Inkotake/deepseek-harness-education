@@ -113,13 +113,16 @@ const PATCHES = [
     why: 'Windows reparse and system directories are reported as directories by the dirent but can '
       + 'fail stat. The original only probed symbolic links, so those entries stayed selectable and '
       + 'the browser offered a path it could not enter. The picker also always opened at the OS home '
-      + 'directory; on Windows it now opens at the current user\'s Desktop instead. That starting '
-      + 'point needs the fallback in the same edit: a Windows profile can have no Desktop directory '
-      + 'at all (OneDrive redirection, enterprise policy, or a removed folder), and the listing of a '
-      + 'missing directory fails with directory-unreadable, so the panel would not open. The Desktop '
-      + 'is therefore used only when it stats as a directory, and the home directory remains both '
-      + 'the fallback and the reported listing.home, which is the client\'s breadcrumb anchor rather '
-      + 'than the starting point.',
+      + 'directory; on Windows it now opens at the current user\'s Desktop instead, and that Desktop '
+      + 'is the one the launcher resolved through the Windows shell (`app.getPath("desktop")`, i.e. '
+      + 'the known folder) rather than a literal `%USERPROFILE%\\Desktop`, which is not where the '
+      + 'desktop lives once OneDrive, enterprise policy, or a localized profile has redirected it. '
+      + 'The literal path survives as the fallback for callers that do not set the variable. That '
+      + 'starting point needs the guard in the same edit: a Windows profile can have no Desktop '
+      + 'directory at all, and the listing of a missing directory fails with directory-unreadable, '
+      + 'so the panel would not open. The Desktop is therefore used only when it stats as a '
+      + 'directory, and the home directory remains both the fallback and the reported listing.home, '
+      + 'which is the client\'s breadcrumb anchor rather than the starting point.',
     edits: [
       {
         file: /^lib\/index\.js$/u,
@@ -132,7 +135,7 @@ const PATCHES = [
         find: /\t\tconst target = resolve\(path \?\? home\);\n/u,
         replace: '\t\tlet target = resolve(path ?? home);\n'
           + '\t\tif (path === void 0 && process.platform === "win32") {\n'
-          + '\t\t\tconst desktop = join(home, "Desktop");\n'
+          + '\t\t\tconst desktop = process.env.DSH_TEACHER_DESKTOP_DIR || join(home, "Desktop");\n'
           + '\t\t\ttry {\n'
           + '\t\t\t\tif ((await raceAbort(stat(desktop), signal)).isDirectory()) target = desktop;\n'
           + '\t\t\t} catch {\n'

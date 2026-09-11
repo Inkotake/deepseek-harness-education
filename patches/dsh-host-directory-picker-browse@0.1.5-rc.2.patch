@@ -1,5 +1,5 @@
 diff --git a/lib/index.js b/lib/index.js
-index 2b8c76e..1a724a1 100644
+index 2b8c76e..8e9f7aa 100644
 --- a/lib/index.js
 +++ b/lib/index.js
 @@ -120,8 +120,8 @@ function messageOf(error) {
@@ -20,7 +20,7 @@ index 2b8c76e..1a724a1 100644
 -		const target = resolve(path ?? home);
 +		let target = resolve(path ?? home);
 +		if (path === void 0 && process.platform === "win32") {
-+			const desktop = join(home, "Desktop");
++			const desktop = process.env.DSH_TEACHER_DESKTOP_DIR || join(home, "Desktop");
 +			try {
 +				if ((await raceAbort(stat(desktop), signal)).isDirectory()) target = desktop;
 +			} catch {

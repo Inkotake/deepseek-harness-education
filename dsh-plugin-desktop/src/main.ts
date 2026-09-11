@@ -639,6 +639,18 @@ async function start(): Promise<void> {
     // command, and every child process agree on the same isolated directory.
     process.env.DSH_HOME = homeDir
     if (safeModePaths !== undefined) process.env.DSH_HOME = homeDir
+    // The Host's folder picker starts at the current user's Desktop. Electron resolves that path
+    // through the Windows shell, which is the only way to reach the real folder when OneDrive,
+    // enterprise policy, or a localized profile has redirected it — the literal
+    // `%USERPROFILE%\Desktop` is simply not where the desktop lives on those machines. The Host
+    // plugin prefers this value and falls back to its own resolution when it is absent, so nothing
+    // here is load-bearing for the picker to work at all.
+    try {
+      const desktopDir = app.getPath('desktop')
+      if (desktopDir !== '') process.env.DSH_TEACHER_DESKTOP_DIR = desktopDir
+    } catch {
+      // No resolvable Desktop on this machine; the picker falls back to the home directory.
+    }
     prepareSafeMode = safeModePaths === undefined
       ? () => {
           const paths = resetDesktopSafeModeEnvironment(desktopUserDataDir)

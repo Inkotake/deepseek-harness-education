@@ -237,13 +237,20 @@ describe('published package surface', () => {
     for (const marker of [
       'let target = resolve(path ?? home);',
       'if (path === void 0 && process.platform === "win32") {',
-      'const desktop = join(home, "Desktop");',
+      // The launcher resolves the Desktop through the Windows shell, because a literal
+      // `%USERPROFILE%\Desktop` is not where the desktop lives once OneDrive or policy redirects
+      // it. The literal path stays as the fallback for callers that do not set the variable.
+      'const desktop = process.env.DSH_TEACHER_DESKTOP_DIR || join(home, "Desktop");',
       'if ((await raceAbort(stat(desktop), signal)).isDirectory()) target = desktop;',
       '/* No Desktop directory on this profile: the home listing is the fallback. */',
     ]) {
       expect(patch).toContain(marker)
       expect(installedHost).toContain(marker)
     }
+    // The resolved path is still only ever adopted when it stats as a directory, so a profile with
+    // no Desktop — redirected, removed, or a same-named file — keeps the home listing instead of
+    // failing to open at all.
+    expect(installedHost).toMatch(/catch \{\s+\/\* No Desktop directory/u)
     // The Desktop is only the starting point: the listing still reports the real home directory,
     // which is the anchor the client collapses its breadcrumb rows against.
     expect(installedHost).toMatch(/return \{\s+path: target,\s+home,\s+crumbs: ancestryCrumbs\(target\),/u)

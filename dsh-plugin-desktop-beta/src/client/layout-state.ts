@@ -1,4 +1,7 @@
 /** Advanced-shell panel state shared by the root slot and layout-service adapter. */
+import type { ILayout, MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
+import type { DesktopLayoutService } from './contracts.ts'
+
 export interface DesktopLayoutSnapshot {
   /** Preferred sidebar width; zero means the compact rail. */
   sidebar: number
@@ -72,8 +75,16 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)))
 }
 
-/** Small observable panel controller used by the advanced root registration. */
-export class DesktopLayoutState {
+/**
+ * Small observable panel controller used by the advanced root registration.
+ *
+ * It implements the upstream `ILayout` face as well as the Desktop extension, because this object is
+ * what `layout-service.ts` provides under the shared `layout` service name. Upstream plugins reach
+ * that service for panel transitions even when this package is the provider, so every member has to
+ * exist: a missing one is a runtime `TypeError` in the middle of an unrelated plugin's click handler.
+ */
+export class DesktopLayoutState implements ILayout, DesktopLayoutService {
+  private navigation = new AbortController()
   private snapshot: DesktopLayoutSnapshot = Object.freeze({
     sidebar: SIDEBAR_DEFAULT,
     details: 0,
@@ -126,6 +137,48 @@ export class DesktopLayoutState {
   /** @param width - requested details width from a resize gesture. */
   setDetails(width: number): void {
     this.publish({ ...this.snapshot, details: clamp(width, DETAILS_MIN, DETAILS_MAX) })
+  }
+
+  /**
+   * Record the selected central panel.
+   *
+   * The Desktop-owned frames declare `conversation` as a single slot and no keyed `main` slot, so a
+   * global panel has nowhere to render. Upstream's sidebar reaches this method for every entry, so
+   * the request is reported rather than silently swallowed: a panel that cannot appear should not
+   * look like it did.
+   * @param panelId - registered main key, or null to show the Conversation.
+   */
+  selectPanel(panelId: MainPanelId | null): void {
+    if (panelId === null) return
+    console.warn(
+      `dsh-plugin-desktop: Desktop frames present the Conversation only;`
+      + ` main panel ${String(panelId)} cannot be shown`,
+    )
+  }
+
+  /** @returns a signal aborted by the next navigation, superseding any earlier pending one. */
+  beginNavigation(): AbortSignal {
+    this.navigation.abort()
+    this.navigation = new AbortController()
+    return this.navigation.signal
+  }
+
+  /**
+   * Show the details column.
+   *
+   * The Desktop frame resolves its own column widths and never overlays the frame, so the upstream
+   * track/fullscreen presentation flags carry no geometry here; the panel either has its resolved
+   * width or is closed.
+   * @param _track - upstream grid-track request; ignored because the frame always tracks.
+   * @param _fullscreen - upstream overlay request; ignored because the frame never overlays.
+   */
+  openRightbar(_track: boolean, _fullscreen: boolean): void {
+    this.openDetails()
+  }
+
+  /** Hide the details column. */
+  closeRightbar(): void {
+    this.closeDetails()
   }
 
   private publish(next: DesktopLayoutSnapshot): void {

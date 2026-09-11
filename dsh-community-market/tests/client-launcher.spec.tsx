@@ -37,6 +37,9 @@ describe('community market launcher', () => {
       useSessions: (() => undefined) as MarketLauncherProps['useSessions'],
       useSessionPendingInteraction: (() => undefined) as MarketLauncherProps['useSessionPendingInteraction'],
       useWorkspaces: (() => undefined) as MarketLauncherProps['useWorkspaces'],
+      // Harness 0.1.5 added `usePanelInfo` to the global standard props every client component
+      // receives. The launcher reads none of it, so the fixture only has to satisfy the seat.
+      usePanelInfo: (() => undefined) as unknown as MarketLauncherProps['usePanelInfo'],
     } satisfies MarketLauncherProps
 
     const { rerender } = render(<MarketLauncher {...props} />)

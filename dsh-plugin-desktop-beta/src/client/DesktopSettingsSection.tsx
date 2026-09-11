@@ -39,6 +39,8 @@ export interface DesktopNotificationSettings {
 export interface DesktopSettingsSectionInjected {
   readonly api: DesktopSettingsApi
   readonly platform: DesktopClientPlatform
+  /** Installed Desktop version rendered by the version row. */
+  readonly version: string
   readonly initialMode: DesktopShellSettings['mode']
   readonly micaSupported: boolean
   readonly setMode: (mode: DesktopShellSettings['mode']) => Promise<void>
@@ -274,6 +276,57 @@ function ToggleRow({
   )
 }
 
+/**
+ * Render the installed version and the launcher-backed update check.
+ *
+ * This row is the only surface that reaches `checkForUpdates`, and it keeps the
+ * launcher contract: the check runs on demand, a second click is ignored while
+ * one is in flight, and a failure states itself instead of silently doing
+ * nothing.
+ * @param props - installed version, update check, and the Desktop translate seat.
+ * @returns the version row, with its failure notice when the check fails.
+ */
+export function DesktopVersionControl({
+  version,
+  checkForUpdates,
+  t,
+}: {
+  readonly version: string
+  readonly checkForUpdates: () => Promise<void>
+  readonly t: (key: DesktopSettingsLocaleKey) => string
+}) {
+  const [checking, setChecking] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const runCheck = (): void => {
+    if (checking) return
+    setChecking(true)
+    setFailed(false)
+    void checkForUpdates()
+      .catch(() => { setFailed(true) })
+      .finally(() => { setChecking(false) })
+  }
+  const visibleVersion = `v${version}`
+  return (
+    <>
+      <div className="dshDesktopSettingsToggleRow">
+        <span className="dshDesktopSettingsToggleLabel">
+          <span className="dshDesktopSettingsChoiceTitle">{t('currentVersion')}</span>
+          <span className="dshDesktopSettingsBadge">{visibleVersion}</span>
+        </span>
+        <button
+          type="button"
+          className="dshDesktopSettingsButton"
+          disabled={checking}
+          onClick={runCheck}
+        >
+          {t(checking ? 'checkingForUpdates' : 'checkForUpdates')}
+        </button>
+      </div>
+      {failed && <p className="dshDesktopSettingsError" role="alert">{t('checkForUpdatesError')}</p>}
+    </>
+  )
+}
+
 function profileState(profile: DesktopProfileView, t: Translate): string {
   if (!profile.exists || !profile.webCapable || !profile.selectable) return t('profileUnavailable')
   return t('profileReady')
@@ -412,6 +465,7 @@ export function DesktopSettingsSection({
   t,
   api,
   platform,
+  version,
   initialMode,
   micaSupported,
   setMode: persistMode,
@@ -771,6 +825,7 @@ export function DesktopSettingsSection({
             </select>
           </label>
         )}
+        <DesktopVersionControl version={version} checkForUpdates={api.checkForUpdates} t={t} />
       </section>
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-web-title">

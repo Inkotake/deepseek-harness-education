@@ -44,7 +44,18 @@ const BUNDLED_NPM_CLI = path.join(RUNTIME, 'node', 'node_modules', 'npm', 'bin',
 const BUNDLED_PNPM = path.join(RUNTIME, 'pnpm', 'bin', 'pnpm.mjs')
 
 const SIDEBAR_ID = 'dsh-better-sidebar'
-const SIDEBAR_VERSION = '0.18.1'
+/**
+ * Published sidebar release to vendor, read from the vendored checkout rather than written out here.
+ *
+ * Deriving it is what keeps the npm pin and the checkout from drifting apart: the checkout was
+ * updated to 0.19.0 while this constant still said 0.18.1, and 0.18.1 declares peer ranges for
+ * Harness 0.1.2 that the shipped 0.1.5 runtime does not satisfy.
+ *
+ * The artifact stays the package upstream published and verified, not a local rebuild of the
+ * checkout: this plugin is an independent project whose own CI mounts its tarball against a real
+ * `dsh web` and asserts the sidebar, terminal, editor and preview chunks all load.
+ */
+const SIDEBAR_VERSION = packageVersion(path.join(SEED_PLUGINS, SIDEBAR_ID))
 const SIDEBAR_SPEC = `${SIDEBAR_ID}@${SIDEBAR_VERSION}`
 
 /** Directories that must never travel from a vendored checkout into a scratch build. */

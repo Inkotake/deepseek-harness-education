@@ -515,11 +515,10 @@ describe('independent Desktop frame', () => {
         id: 'desktop-frame-titlebar',
       })
       expect(registrations[1]).not.toHaveProperty('children')
+      expect(registrations[1]).not.toHaveProperty('locale')
       expect(registrations[1]?.inject).toBeTypeOf('function')
-      expect((registrations[1]?.inject as () => Record<string, unknown>)()).toMatchObject({
-        environment: { mode: 'extended', platform: 'win32', material: 'off' },
-        api: expect.any(Object),
-        setMode: expect.any(Function),
+      expect((registrations[1]?.inject as () => Record<string, unknown>)()).toEqual({
+        environment: { version: '2.0.3', mode: 'extended', platform: 'win32', material: 'off', micaSupported: false },
       })
       expect(registrations).toHaveLength(2)
       expect(dataset).toMatchObject({
@@ -580,8 +579,9 @@ describe('independent Desktop frame', () => {
         id: 'desktop-frame-titlebar',
       })
       expect(registrations[0]).not.toHaveProperty('children')
-      expect((registrations[0]?.inject as () => Record<string, unknown>)()).toMatchObject({
-        setMode: expect.any(Function),
+      expect(registrations[0]).not.toHaveProperty('locale')
+      expect((registrations[0]?.inject as () => Record<string, unknown>)()).toEqual({
+        environment: { version: '2.0.3', mode: 'compatibility', platform: 'darwin', material: 'transparent', micaSupported: false },
       })
       expect(JSON.stringify(registrations)).not.toContain('desktop.titlebar.action')
       expect(dataset).toMatchObject({

@@ -52,19 +52,63 @@ node scripts/teacher/upstream-bump.mjs --version 0.1.5-rc.2
 | 1 | 解析上游 tag `dsh-v<version>` 到具体 commit（**不能用浮动分支**） |
 | 2 | 在子模块里 `checkout --detach <commit>` |
 | 3 | `yarn upstream:prepare-runtime` 构建 official profile 的 runtime |
-| 4 | 校验产出的 `vendor/dsh-runtime/<version>/manifest.json`（版本 + buildProfile 必须匹配） |
-| 5 | 改写 `upstream.json` 的 channel（commit / sourceVersion / runtimePackageVersion / runtimeSource） |
-| 6 | 钉住 `dsh-plugin-desktop` 与 `dsh-community-market` 的 `@deepseek-ai/dsh` 依赖 |
-| 7 | `node scripts/sync-vendored-runtime.mjs --write --channel beta` 重写 resolutions |
+| 4 | 校验 pack 产物：`deepseek-harness/dist/npm/` 下的 tarball 清单 |
+| 5 | 改写 `upstream.json` 里**每个**频道的 commit / sourceVersion |
+| 6 | 按频道逐个 `sync-vendored-runtime --write`：搬运 tarball、生成带 sha256 的 manifest、重写 resolutions、钉各频道产物依赖 |
+| 7 | 校验生成的 manifest（version / buildProfile / commit / 包数） |
 | 8 | `yarn install` |
+| 9 | 列出仍需人工处理的事项（失效的 patch、内置插件复核等） |
 
-**失败即停**：任何一步失败，脚本立即停下并说明原因，**不会留下半迁移的树**。`--skip-install` 可跳过第 8 步。
+**默认升级所有频道，而不只是 `activeChannel`。** 本发行包打的是 `dsh-plugin-desktop`
+workspace，它属于 `stable` 频道；而 `activeChannel` 是 `beta`。只升 active 频道会**升级了却
+没升到**：130 个依赖留在旧版本，同时树里出现两套 `@deepseek-ai/dsh*` resolutions。
+需要只升一个频道时用 `--channel`。
+
+**失败即停**：任何一步失败，脚本立即停下并说明原因，**不会留下半迁移的树**。
+`--skip-install` 跳过第 8 步；`--skip-prepare` 复用已构建的 `dist/npm`（第 3 步是唯一慢步骤，
+后续任何一步失败都不该让你再等一次完整上游构建）。
 
 ### 第 3 步：处理脚本明确留下的 TODO
 
 第 1、2 步是机械的；下面这些**必须人工**，脚本会逐条列出来而不是假装完成：
 
-1. **重新生成 patch** —— `patches/` 里 7 个 patch 都按**精确版本**命名（如 `dsh-settings@0.1.2-rc.1.patch`）。版本一变就 patch 不上，必须对新 tarball 重新生成。
+1. **重新生成 patch** —— 用 `node scripts/teacher/port-patches.mjs`。
+   见下节。
+
+### patch 由脚本派生，不手写
+
+`patches/` 里的 `dsh-*` patch 改的是**上游构建产物里的确切文本**，所以每次升级都会失效。
+手写重做是升级最耗时的一环，因此每个 patch 在 `scripts/teacher/port-patches.mjs` 里声明为
+「文件模式 + 有序 find/replace」，脚本从钉住的 vendor tarball 派生 patch 文件：
+
+```
+node scripts/teacher/port-patches.mjs          # 重新生成
+node scripts/teacher/port-patches.mjs --check  # 只校验声明与文件是否一致（可进 CI）
+```
+
+上游改写了某个 patch 所针对的代码时，脚本会**直接失败并指出是哪个模式**，而不是留下一个
+悄悄不再生效的 patch。Yarn 在 install 时应用 `patch:` resolutions，所以错的 patch 在那里
+也会失败——两道独立检查。
+
+当前保留 4 个 patch，以及它们各自为什么必须存在：
+
+| patch | 为什么必须 |
+|---|---|
+| `dsh@` | profile 插件运行器用 shell 调 pnpm，Windows 下不加 `windowsHide` 每次都会弹出控制台窗口 |
+| `dsh-web-app@` | 浏览器打开器 spawn 的是 `process.execPath`（即 Electron）。不给子进程 `ELECTRON_RUN_AS_NODE` 会**再启动一个 app 实例**而不是当 Node 跑；同时隐藏其控制台窗口 |
+| `dsh-win32-process@` | 两处 CreateProcess 只传了 `STARTF_USESTDHANDLES`，缺 `STARTF_USESHOWWINDOW` + `SW_HIDE`，控制台子进程会显示窗口 |
+| `dsh-host-directory-picker-browse@` | Windows reparse/system 目录会被 dirent 报成目录但 `stat` 失败，原逻辑只探测符号链接，于是列出了进不去的路径 |
+
+`app-builder-lib@` 与 `open@` 是第三方 patch，按我们自己选的版本钉住，不随上游漂移。
+
+**升到 0.1.5-rc.2 时删掉的 4 个 patch，以及为什么能删：**
+
+| 删掉的 patch | 为什么不再需要 |
+|---|---|
+| `dsh-subprocess-local@` | 上游自己现在在 `spawn.ts` / `windows-inspector.ts` 里设了 `windowsHide`，README 也已写明 |
+| `dsh-settings@` | 那个 patch 是给 alpha.2 之前插件用的兼容 shim，**唯一的真实消费者是我们自己的代码**；已改为直接传字面量命名空间 |
+| `dsh-client-ui-directory-picker-browse@` | 上游把「原生文件夹选择器」做成了一等插件（`ui-directory-picker-native` + `host-directory-picker-native` + `directory-picker-auto`），注册进**完全相同的两个 slot 洞**。我们那 182 行 patch 已过时 |
+| `dsh-client-ui-settings-general@` | 只是给自建的 desktop 设置分区画了个图标，属装饰，随该分区一并去掉 |
 2. **修桌面源码的 API 漂移** —— `yarn workspace dsh-plugin-desktop build`，按报错改。
 3. **重建 teacher runtime** —— `build-teacher-runtime.mjs` + `build-profile-seed.mjs`（manifests 与 seed 都引用版本号）。
 4. **考虑同步升级 vendor plugin** —— 例如 `dsh-better-sidebar`：我们之所以钉在 0.18.1，是因为 **0.1.2-rc.1 没有 `dsh-client-ui-sidebar-right`**；该包在 **0.1.5 起存在**，所以 bump 之后即可升回 0.19.0。
@@ -97,10 +141,11 @@ node scripts/teacher/upstream-bump.mjs --version 0.1.5-rc.2
 ## 五、当前状态
 
 ```
-channel            : beta
-pinned Harness     : 0.1.2-rc.1 (a66e47020478)
-vendor tarballs    : 242 (build profile official)
-upstream           : 2 个更新版本 —— 0.1.5-rc.1, 0.1.5-rc.2
+channel            : beta（active）
+pinned Harness     : 0.1.5-rc.2 (fb2c4b9e698e)   stable 与 beta 同版本
+vendor tarballs    : 265 (build profile official)
+保留的 dsh patch   : 4
 ```
 
-升级到 `0.1.5-rc.2` 的机械步骤已经验证可跑（干跑解析到 tag `dsh-v0.1.5-rc.2` → commit `fb2c4b9e698e`），剩余的是第三节列出的 5 项人工事项。
+从 `0.1.2-rc.1` 升到 `0.1.5-rc.2` 的机械步骤已经验证可跑，patch 也已用
+`port-patches.mjs` 重新派生并在 `yarn install` 中验证应用成功。

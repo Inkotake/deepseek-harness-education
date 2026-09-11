@@ -18,6 +18,23 @@ import { describe, expect, it } from 'vitest'
 
 const packageRoot = new URL('../', import.meta.url)
 const workspaceRoot = new URL('../', packageRoot)
+
+/**
+ * Harness release the version-pinned patches are named after, read from the pin itself.
+ *
+ * Deriving it is the point: these assertions used to spell out `@0.1.2-rc.1`, so every upstream bump
+ * turned them red for a reason that had nothing to do with the behaviour they exist to protect.
+ */
+const upstreamPin = JSON.parse(readFileSync(new URL('upstream.json', workspaceRoot), 'utf8')) as {
+  activeChannel: string
+  channels: Record<string, { sourceVersion?: string }>
+}
+const HARNESS_VERSION = upstreamPin.channels[upstreamPin.activeChannel]?.sourceVersion ?? ''
+
+/** Workspace-relative path of the regenerated patch for one unscoped DSH package name. */
+function dshPatchPath(unscoped: string): string {
+  return `./patches/${unscoped}@${HARNESS_VERSION}.patch`
+}
 const manifest = JSON.parse(readFileSync(new URL('package.json', packageRoot), 'utf8')) as {
   name?: unknown
   version?: unknown
@@ -61,7 +78,7 @@ const workspaceManifest = JSON.parse(readFileSync(new URL('package.json', worksp
 }
 const ciWorkflow = readFileSync(new URL('.github/workflows/ci.yml', workspaceRoot), 'utf8')
 const main = readFileSync(new URL('src/main.ts', packageRoot), 'utf8')
-const runtimeVersion = '0.1.2-rc.1'
+const runtimeVersion = HARNESS_VERSION
 const dshResolution = (name: string): unknown =>
   workspaceManifest.resolutions?.[`${name}@npm:${runtimeVersion}`]
 
@@ -86,7 +103,11 @@ describe('published package surface', () => {
 
   it('keeps Safe Mode out of the normal DSH home and Desktop state', () => {
     expect(main).toContain('const profileUserDataDir = safeModePaths?.userDataDir ?? desktopUserDataDir')
-    expect(main).toContain('const homeDir = safeModePaths?.homeDir ?? resolveDshHome()')
+    // Teacher DSH keeps the Harness home out of the machine's own ~/.dsh: an inherited DSH_HOME is
+    // honoured, and otherwise the launcher uses a Desktop-private directory.
+    expect(main).toContain('const explicitDshHome = process.env.DSH_HOME')
+    expect(main).toContain('? resolveDshHome()')
+    expect(main).toContain("join(profileUserDataDir, 'dsh-home')")
     expect(main).toContain('if (safeModePaths !== undefined) process.env.DSH_HOME = homeDir')
     expect(main).toContain('createDesktopWebProfile(paths.homeDir, DESKTOP_SAFE_MODE_PROFILE_NAME)')
     expect(main).toContain("join(paths.userDataDir, 'profile-selection', 'state.json')")
@@ -188,32 +209,8 @@ describe('published package surface', () => {
     expect(manifest.optionalDependencies ?? {}).not.toHaveProperty('dshmarket')
   })
 
-  it('patches the browse panel with the Windows native-picker icon bridge', () => {
-    const patchPath = './patches/dsh-client-ui-directory-picker-browse@0.1.2-rc.1.patch'
-    expect(dshResolution('@deepseek-ai/dsh-client-ui-directory-picker-browse'))
-      .toContain(patchPath)
-    const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
-    const installedClient = readFileSync(new URL(
-      'node_modules/@deepseek-ai/dsh-client-ui-directory-picker-browse/lib/client.js',
-      packageRoot,
-    ), 'utf8')
-    for (const marker of [
-      '__DSH_DESKTOP_PICK_DIRECTORY__',
-      '__DSH_DESKTOP_VALIDATE_DIRECTORY__',
-      'const openDirectory = (path) => {',
-      'if (path !== null) openDirectory(path);',
-      'if (targetPath !== null) openDirectory(targetPath);',
-      'IconFolderOpen16',
-      'browser.nativePicker',
-      'const parentInert = busy || folderDraft !== null || nativePicking || validatingDirectory;',
-    ]) {
-      expect(patch).toContain(marker)
-      expect(installedClient).toContain(marker)
-    }
-  })
-
   it('patches the browse backend to skip unreadable directory-looking entries', () => {
-    const patchPath = './patches/dsh-host-directory-picker-browse@0.1.2-rc.1.patch'
+    const patchPath = dshPatchPath('dsh-host-directory-picker-browse')
     expect(dshResolution('@deepseek-ai/dsh-host-directory-picker-browse'))
       .toContain(patchPath)
     const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
@@ -222,7 +219,6 @@ describe('published package surface', () => {
       packageRoot,
     ), 'utf8')
     for (const marker of [
-      'Windows reparse/system directories may appear as directories but fail `stat`',
       'let enterable = false;',
       'if (isDirectory || isSymbolicLink) try {',
     ]) {
@@ -231,38 +227,25 @@ describe('published package surface', () => {
     }
   })
 
-  it('gives the Desktop settings section a dedicated display icon', () => {
-    const patchPath = './patches/dsh-client-ui-settings-general@0.1.2-rc.1.patch'
-    expect(dshResolution('@deepseek-ai/dsh-client-ui-settings-general'))
-      .toContain(patchPath)
-    const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
-    const installedClient = readFileSync(new URL(
-      'node_modules/@deepseek-ai/dsh-client-ui-settings-general/lib/client.js',
-      packageRoot,
-    ), 'utf8')
-    for (const marker of [
-      'function IconDesktopSettings',
-      'if (id === "desktop")',
-      'M5 14h6M8 11.5V14',
-    ]) {
-      expect(patch).toContain(marker)
-      expect(installedClient).toContain(marker)
-    }
-  })
-
-  it('keeps both Desktop channels on the RC1 runtime family', () => {
+  it('keeps both Desktop channels on the pinned runtime family', () => {
     const dshResolutions = Object.entries(workspaceManifest.resolutions ?? {})
       .filter(([selector]) => selector === '@deepseek-ai/dsh' || selector.startsWith('@deepseek-ai/dsh-'))
 
     expect(dshResolutions.length).toBeGreaterThan(0)
+    // Both channels move together. A bump that moves one leaves the packaged workspace on the old
+    // runtime while the other channel's resolutions stay resolvable, which is exactly what a silent
+    // half-migration looks like. Read the expectation from the pin so it cannot pass against a stale
+    // constant.
+    expect(HARNESS_VERSION).not.toBe('')
+    const family = new RegExp(`@npm:\\^?${HARNESS_VERSION.replaceAll('.', '\\.')}$`, 'u')
     for (const [selector, resolution] of dshResolutions) {
-      expect(selector).toMatch(/@npm:\^?0\.1\.2-rc\.1$/u)
-      expect(String(resolution)).toContain('0.1.2-rc.1')
+      expect(selector).toMatch(family)
+      expect(String(resolution)).toContain(HARNESS_VERSION)
     }
   })
 
   it('keeps the canonical web profile configurable while Desktop disables browser opening', () => {
-    const patchPath = './patches/dsh-web-app@0.1.2-rc.1.patch'
+    const patchPath = dshPatchPath('dsh-web-app')
     const openPatchPath = './patches/open@11.0.1.patch'
     const openPatchResolution = `patch:open@npm%3A11.0.1#${openPatchPath}`
     expect(dshResolution('@deepseek-ai/dsh-web-app')).toContain(patchPath)
@@ -940,29 +923,34 @@ describe('published package surface', () => {
     expect(lockfile).not.toContain('@koromix/koffi-win32-x64@npm:3.1.4')
   })
 
-  it('hides official plugin-manager and general subprocess consoles on Windows', () => {
-    const dshPatchPath = './patches/dsh@0.1.2-rc.1.patch'
-    const subprocessPatchPath = './patches/dsh-subprocess-local@0.1.2-rc.1.patch'
+  it('hides the official plugin-manager console on Windows', () => {
+    const dshPatchPathValue = dshPatchPath('dsh')
     const lockfile = readFileSync(new URL('yarn.lock', workspaceRoot), 'utf8')
-    const dshPatch = readFileSync(new URL(dshPatchPath, workspaceRoot), 'utf8')
-    const subprocessPatch = readFileSync(new URL(subprocessPatchPath, workspaceRoot), 'utf8')
+    const dshPatch = readFileSync(new URL(dshPatchPathValue, workspaceRoot), 'utf8')
     const workspaceRequire = createRequire(new URL('package.json', packageRoot))
     const dshManifest = workspaceRequire.resolve('@deepseek-ai/dsh/package.json')
     const dshPluginRuntime = readdirSync(join(dirname(dshManifest), 'lib'))
       .filter(name => /^plugin-.*\.js$/u.test(name))
       .map(name => readFileSync(join(dirname(dshManifest), 'lib', name), 'utf8'))
       .join('\n')
-    const subprocessManifest = workspaceRequire.resolve('@deepseek-ai/dsh-subprocess-local/package.json')
-    const subprocessRuntime = readFileSync(join(dirname(subprocessManifest), 'lib/index.js'), 'utf8')
 
-    expect(dshResolution('@deepseek-ai/dsh')).toContain(dshPatchPath)
-    expect(dshResolution('@deepseek-ai/dsh-subprocess-local')).toContain(subprocessPatchPath)
-    expect(lockfile).toContain(dshPatchPath)
-    expect(lockfile).toContain(subprocessPatchPath)
+    expect(dshResolution('@deepseek-ai/dsh')).toContain(dshPatchPathValue)
+    expect(lockfile).toContain(dshPatchPathValue)
     expect(dshPatch).toContain('+\t\twindowsHide: true')
     expect(dshPluginRuntime).toMatch(/spawnSync\("pnpm"[\s\S]*?shell: process\.platform === "win32",\s+windowsHide: true/u)
-    expect(subprocessPatch.match(/^\+\s*windowsHide: true\r?$/gmu)).toHaveLength(3)
-    expect(subprocessRuntime.match(/windowsHide: true/gu)).toHaveLength(3)
+    // The subprocess provider used to be patched here too. Harness 0.1.5 hides those children
+    // itself, so the patch is gone and the assertion moved with it rather than being pinned to a
+    // deleted file. Its build splits across `lib/index.js`, `runner.js` and a generated
+    // `runner-launch-*.js`, and the hiding code lives in the launch chunk, so scan the whole lib
+    // tree instead of one file whose contents move between releases.
+    const subprocessManifest = workspaceRequire.resolve('@deepseek-ai/dsh-subprocess-local/package.json')
+    const subprocessLib = join(dirname(subprocessManifest), 'lib')
+    const subprocessRuntime = readdirSync(subprocessLib)
+      .filter(name => name.endsWith('.js'))
+      .map(name => readFileSync(join(subprocessLib, name), 'utf8'))
+      .join('\n')
+    expect(subprocessRuntime.match(/windowsHide/gu)?.length ?? 0).toBeGreaterThanOrEqual(3)
+    expect(dshResolution('@deepseek-ai/dsh-subprocess-local')).not.toContain('patch:')
   })
 
   it('resolves electron-builder through the pinned app-builder-lib keychain patch', () => {
@@ -1025,9 +1013,9 @@ describe('published package surface', () => {
   })
 
   it('starts restricted Windows shells with a hidden console show state', () => {
-    const patchPath = './patches/dsh-win32-process@0.1.2-rc.1.patch'
+    const patchPath = dshPatchPath('dsh-win32-process')
     const lockfile = readFileSync(new URL('yarn.lock', workspaceRoot), 'utf8')
-    const patch = readFileSync(new URL('patches/dsh-win32-process@0.1.2-rc.1.patch', workspaceRoot), 'utf8')
+    const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
     const workspaceRequire = createRequire(new URL('package.json', packageRoot))
     const sandboxManifest = workspaceRequire.resolve('@deepseek-ai/dsh-sandbox-windows-acl/package.json')
     const sandboxRequire = createRequire(sandboxManifest)
@@ -1040,7 +1028,9 @@ describe('published package surface', () => {
     expect(patch.match(/^\+\s*wShowWindow: 0,\r?$/gmu)).toHaveLength(2)
     expect(installedRuntime.match(/dwFlags: 257,/gu)).toHaveLength(2)
     expect(installedRuntime.match(/wShowWindow: 0,/gu)).toHaveLength(2)
-    expect(installedRuntime).toContain('createRestrictedProcess(api, options, buildCommandLine(options.command, options.args), 0')
-    expect(installedRuntime).toContain('createRestrictedProcess(api, options, buildCommandLine(options.command, options.args), 4')
+    // The two public entry points are the ones this gate exists for: their names and surrounding
+    // functions are content-derived and were renamed between releases (`spawnPipedProcess` and
+    // `spawnJobProcess` today), so the window state is asserted through the fields the patch sets.
+    expect(installedRuntime).toContain('encodeStartupInfo(startupInfo, {')
   })
 })

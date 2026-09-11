@@ -44,10 +44,18 @@ function completePackageResolver(unpackedRoot: string): PackageResolver {
   return specifier => join(unpackedRoot, 'resolved', `${specifier.replaceAll('/', '-')}.js`)
 }
 
+/** One generated DSH CLI chunk, derived so the absent-entry case name never pins a release hash. */
+const DSH_CLI_CHUNK = REQUIRED_DSH_CLI_RUNTIME_ENTRIES.find(entry => /\/lib\/plugin-.*\.js$/u.test(entry))
+
 describe('packaged desktop runtime verification', () => {
   it('tracks every generated DSH CLI chunk without pinning one release hash', () => {
+    const chunks = REQUIRED_DSH_CLI_RUNTIME_ENTRIES.filter(entry => /\/lib\/plugin-.*\.js$/u.test(entry))
+
     expect(REQUIRED_DSH_CLI_RUNTIME_ENTRIES).toContain('node_modules/@deepseek-ai/dsh/lib/bin.js')
-    expect(REQUIRED_DSH_CLI_RUNTIME_ENTRIES).toContain('node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js')
+    // The chunk suffix is a content hash that changes every release, so the gate derives the list by
+    // reading the installed package. Assert the derivation covers the generated chunks instead of
+    // naming one: a pinned hash only proves somebody edited the list the last time a bump broke it.
+    expect(chunks.length).toBeGreaterThan(0)
     expect(REQUIRED_DSH_CLI_RUNTIME_ENTRIES).not.toContain('node_modules/@deepseek-ai/dsh/lib/plugin-9h8shc4d.js')
   })
 
@@ -237,7 +245,7 @@ describe('packaged desktop runtime verification', () => {
     'lib/diagnostic-export-worker.js',
     'lib/update-download.js',
     'node_modules/@deepseek-ai/dsh/lib/bin.js',
-    'node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js',
+    ...(DSH_CLI_CHUNK === undefined ? [] : [DSH_CLI_CHUNK]),
     'node_modules/@deepseek-ai/dsh-subprocess-local/lib/index.js',
     'node_modules/open/index.js',
     'node_modules/pnpm/bin/pnpm.mjs',

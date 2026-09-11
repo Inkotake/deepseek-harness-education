@@ -15,7 +15,6 @@ import {
   THEME_SETTINGS_NAMESPACE,
   type ThemeSettings,
 } from '@deepseek-ai/dsh-client-ui-theme'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import {
   handleRendererBootRequest,
   RENDERER_BOOT_REPORT_PATH,
@@ -88,11 +87,13 @@ export const name = 'desktop-shell'
 /** Services required by the desktop shell; `desktopRuntime` is probed, not required. */
 export const inject = ['webServer', 'webRuntime', 'appExit', 'settings', 'connection']
 
-/** Standard settings namespace shared by tray and configuration surfaces. */
-export const DESKTOP_SETTINGS_NAMESPACE = settingsNamespace('dsh-desktop')
-
-const UI_THEME_SETTINGS_NAMESPACE = settingsNamespace(THEME_SETTINGS_NAMESPACE)
-const UI_LOCALE_SETTINGS_NAMESPACE = settingsNamespace(LOCALE_SETTINGS_NAMESPACE)
+/**
+ * Standard settings namespace shared by tray and configuration surfaces.
+ *
+ * Upstream 0.1.5 removed the runtime `settingsNamespace` constructor: a namespace is now a plain
+ * string whose validity is checked by the compiler, so the literal is the entire construction.
+ */
+export const DESKTOP_SETTINGS_NAMESPACE = 'dsh-desktop'
 
 /** Apply the official Connection trust and browser-auth fence before a private Desktop route. */
 function rejectDesktopRequest(
@@ -447,12 +448,12 @@ export function apply(ctx: Context, config: Config): void {
   }, 'dsh-plugin-desktop: live browser access and restart-applied native settings')
   if (runtime.platform !== 'linux') {
     ctx.on('settings/updated', (namespace, next) => {
-      if (namespace !== UI_THEME_SETTINGS_NAMESPACE) return
+      if (namespace !== THEME_SETTINGS_NAMESPACE) return
       runtime.setThemeSource((next as ThemeSettings).preference)
     })
   }
   ctx.on('settings/updated', (namespace, next) => {
-    if (namespace !== UI_LOCALE_SETTINGS_NAMESPACE) return
+    if (namespace !== LOCALE_SETTINGS_NAMESPACE) return
     runtime.setLocalePreference(desktopLocalePreference((next as LocaleSettings).preference))
   })
   ctx.effect(
@@ -485,11 +486,11 @@ export function apply(ctx: Context, config: Config): void {
         trayIcons,
         readLocalePreference: () => {
           return desktopLocalePreference(
-            (ctx.settings.get(UI_LOCALE_SETTINGS_NAMESPACE) as LocaleSettings | undefined)?.preference,
+            (ctx.settings.get(LOCALE_SETTINGS_NAMESPACE) as LocaleSettings | undefined)?.preference,
           )
         },
         readThemeSource: () => {
-          const theme = ctx.settings.get(UI_THEME_SETTINGS_NAMESPACE) as ThemeSettings | undefined
+          const theme = ctx.settings.get(THEME_SETTINGS_NAMESPACE) as ThemeSettings | undefined
           if (theme === undefined) {
             throw new Error('dsh-plugin-desktop: custom shell requires the ui-theme settings namespace')
           }

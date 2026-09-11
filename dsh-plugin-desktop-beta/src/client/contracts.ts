@@ -1,4 +1,6 @@
 /** Sidebar geometry passed by the desktop root slot. */
+import type { ILayout } from '@deepseek-ai/dsh-client-ui-layout/client'
+
 export interface DesktopSidebarOwnerProps {
   /** Whether the sidebar is showing its compact rail. */
   collapsed: boolean
@@ -54,8 +56,16 @@ export interface DesktopWindowService {
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    /** Desktop-owned layout service in extended and enhanced modes. */
-    layout: DesktopLayoutService
+    /**
+     * Panel transitions for the active presentation.
+     *
+     * Declared as the upstream face, not the Desktop one: this package only provides the `layout`
+     * service when `dsh-client-ui-layout` is absent, and both providers declare the same service
+     * name on the same interface. Declaring the narrower Desktop subset here would make the two
+     * declarations disagree, and hiding that behind `skipLibCheck` would leave upstream callers
+     * reaching for members the provided object does not have.
+     */
+    layout: ILayout
     /** Native window geometry for the current Desktop renderer generation. */
     desktopWindow: DesktopWindowService
   }

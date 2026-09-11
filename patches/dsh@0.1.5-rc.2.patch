@@ -1,0 +1,14 @@
+diff --git a/lib/plugin-Ddi42qoW.js b/lib/plugin-Ddi42qoW.js
+index bf2655e..d267f22 100644
+--- a/lib/plugin-Ddi42qoW.js
++++ b/lib/plugin-Ddi42qoW.js
+@@ -109,7 +109,8 @@ function runPlugin(profile, args) {
+ 	const result = spawnSync("pnpm", args.map((argument) => anchorPathSpec(argument, process.cwd())), {
+ 		cwd: dir,
+ 		stdio: "inherit",
+-		shell: process.platform === "win32"
++		shell: process.platform === "win32",
++		windowsHide: true
+ 	});
+ 	if (result.error !== void 0) {
+ 		if (result.error.code === "ENOENT") {

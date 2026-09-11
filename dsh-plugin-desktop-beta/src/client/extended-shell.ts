@@ -4,13 +4,6 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from './contracts.ts'
 import { ExtendedFrame } from './ExtendedFrame.tsx'
-import { createDesktopSettingsApi } from './desktop-settings-api.ts'
-import {
-  DESKTOP_SETTINGS_LOCALE_NAMESPACE,
-  DESKTOP_SHELL_SETTINGS_NAMESPACE,
-  type DesktopSettingsClientControl,
-} from './desktop-settings.ts'
-import type { DesktopShellSettings } from './DesktopSettingsSection.tsx'
 import type { DesktopClientEnvironment } from './environment.ts'
 import { DesktopFrameTitlebar } from './ExtendedTitlebar.tsx'
 import { installExtendedStyles } from './extended-styles.ts'
@@ -64,18 +57,10 @@ function applyExtendedOwnedShell(ctx: ClientContext, environment: DesktopClientE
 export function applyFramedShell(
   ctx: ClientContext,
   environment: DesktopClientEnvironment,
-  settingsControl?: DesktopSettingsClientControl,
 ): void {
   if (environment.mode !== 'compatibility' && environment.mode !== 'extended') {
     throw new Error(`dsh-plugin-desktop: framed shell received mode ${JSON.stringify(environment.mode)}`)
   }
-  const api = settingsControl?.api ?? createDesktopSettingsApi()
-  const setMode = settingsControl?.setMode ?? (async (mode: DesktopShellSettings['mode']) => {
-    const desktopSettings = ctx.settingsScope.bind<DesktopShellSettings>({
-      namespace: DESKTOP_SHELL_SETTINGS_NAMESPACE,
-    })
-    await desktopSettings.set('mode', mode)
-  })
 
   ctx.effect(() => {
     const contentViewport = document.getElementById('root')
@@ -96,12 +81,13 @@ export function applyFramedShell(
     }
   }, `desktop: independent ${environment.mode} frame styles`)
 
+  // The band renders no controls of its own, so it injects only the generation
+  // environment its platform and material attributes are derived from.
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: 'desktop-frame-titlebar',
     order: -1000,
-    locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
-    inject: () => ({ api, environment, setMode }),
+    inject: () => ({ environment }),
   }, DesktopFrameTitlebar))
 }
 
@@ -109,7 +95,6 @@ export function applyFramedShell(
 export function applyExtendedShell(
   ctx: ClientContext,
   environment: DesktopClientEnvironment,
-  settingsControl?: DesktopSettingsClientControl,
 ): void {
   if (environment.mode !== 'extended') {
     throw new Error(`dsh-plugin-desktop: extended shell received mode ${JSON.stringify(environment.mode)}`)
@@ -117,5 +102,5 @@ export function applyExtendedShell(
   // Losing the layout race only drops the owned presentation; the framed
   // chrome (titlebar overlay) still layers over whatever presents the root.
   applyExtendedOwnedShell(ctx, environment)
-  applyFramedShell(ctx, environment, settingsControl)
+  applyFramedShell(ctx, environment)
 }

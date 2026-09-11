@@ -198,6 +198,31 @@ export function DesktopNativeActions({ api, t, placement }: DesktopNativeActions
             </div>
           )}
         </div>
+        <div className="dshDesktopNativeActionMenuAnchor" ref={developerMenuRef}>
+          <button
+            type="button"
+            className="dshDesktopSettingsHeaderButton"
+            aria-expanded={developerMenuOpen}
+            aria-haspopup="menu"
+            disabled={busy}
+            onClick={() => {
+              setRestartMenuOpen(false)
+              setDeveloperMenuOpen(value => !value)
+            }}
+          >
+            {t('developerOptions')}
+            <ChevronDown aria-hidden="true" />
+          </button>
+          {developerMenuOpen && (
+            <div className="dshDesktopActionMenu" role="menu">
+              <DesktopDeveloperMenuItems
+                busy={busy}
+                t={t}
+                onToggleDeveloperTools={() => { runRendererAction('devtools') }}
+              />
+            </div>
+          )}
+        </div>
       </div>
     )
   }

@@ -9,15 +9,11 @@ import {
   DesktopRestartMenuItems,
 } from '../src/client/DesktopNativeActions.tsx'
 import {
-  DesktopModeControl,
-  DesktopVersionControl,
-  selectDesktopFrameMode,
-} from '../src/client/ExtendedTitlebar.tsx'
-import {
   desktopAdvancedModeTarget,
   desktopBrowserUrlsShouldRender,
   DesktopAdvancedModeRow,
   DesktopSettingsSection,
+  DesktopVersionControl,
   persistDesktopBrowserAccessHot,
   persistDesktopNetworkExposureHot,
   readDesktopSettingsUntilLanSettled,
@@ -500,7 +496,7 @@ describe('Desktop native action presentation', () => {
     expect(markup).toContain('aria-label="Developer options"')
   })
 
-  it('renders the Host-supplied version through the shadcn hover-card trigger', () => {
+  it('renders the Host-supplied version and update check through the settings row', () => {
     const markup = renderToStaticMarkup(createElement(DesktopVersionControl, {
       version: '2.0.3',
       checkForUpdates: api.checkForUpdates,
@@ -508,34 +504,12 @@ describe('Desktop native action presentation', () => {
     }))
 
     expect(markup).toContain('v2.0.3')
-    expect(markup).toContain('aria-label="Current version v2.0.3"')
-    expect(markup).toContain('data-slot="hover-card-trigger"')
+    expect(markup).toContain('Current version')
+    expect(markup).toContain('Check for updates')
+    expect(markup).toContain('dshDesktopSettingsToggleRow')
   })
 
-  it('renders the active presentation pill through a shadcn hover-card trigger', () => {
-    const markup = renderToStaticMarkup(createElement(DesktopModeControl, {
-      mode: 'extended',
-      setMode: vi.fn(async () => {}),
-      restart: vi.fn(async () => {}),
-      t,
-    }))
-
-    expect(markup).toContain('Extended window')
-    expect(markup).toContain('aria-label="Desktop appearance and behavior: Extended window"')
-    expect(markup).toContain('data-slot="hover-card-trigger"')
-  })
-
-  it('persists a presentation change before requesting the confirmed restart', async () => {
-    const order: string[] = []
-    const setMode = vi.fn(async (mode: string) => { order.push(`mode:${mode}`) })
-    const restart = vi.fn(async () => { order.push('restart') })
-
-    await selectDesktopFrameMode('advanced', setMode, restart)
-
-    expect(order).toEqual(['mode:advanced', 'restart'])
-  })
-
-  it('keeps explicit text labels in settings', () => {
+  it('keeps explicit text labels in settings and the Developer Tools toggle reachable there', () => {
     const markup = renderToStaticMarkup(createElement(DesktopNativeActions, {
       api,
       t,
@@ -545,8 +519,8 @@ describe('Desktop native action presentation', () => {
     expect(markup).toContain('Open DSH Terminal')
     expect(markup).toContain('Export Diagnostics')
     expect(markup).toContain('Restart')
-    expect(markup).toContain('aria-haspopup="menu"')
-    expect(markup).not.toContain('Developer options')
+    expect(markup).toContain('Developer options')
+    expect(markup.match(/aria-haspopup="menu"/g)).toHaveLength(2)
   })
 
   it('groups reload with both restart actions and leaves only Developer Tools in its menu', () => {
@@ -657,6 +631,7 @@ describe('Desktop settings Slot registration', () => {
     expect(options.label()).toBe(`${DESKTOP_SETTINGS_LOCALE_NAMESPACE}:nav`)
     expect(options.inject()).toMatchObject({
       platform: 'darwin',
+      version: '2.0.3',
       initialMode: 'compatibility',
       micaSupported: false,
       setMode: expect.any(Function),

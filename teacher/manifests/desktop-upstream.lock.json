@@ -1,14 +1,17 @@
 {
   "name": "desktop-upstream.lock",
   "version": "0.1.0",
+  "watches": "upstream pins only; this fork is not the subject of this file",
   "desktop": {
     "repo": "https://github.com/anywhere-labs/dsh-desktop",
-    "tag": null,
-    "commit": "c8009902451f13b56ee06a4658e88a4aca550f7b"
+    "commit": null,
+    "note": "Upstream Desktop baseline. This fork pins the Harness (see `harness`), not an upstream Desktop commit, so `commit` stays null until an operator resolves a revision with --desktop-commit. The Desktop base version this fork derives from is recorded in THIRD_PARTY_NOTICES.md. This fork's own HEAD is never written here."
   },
   "harness": {
-    "repo": "https://github.com/deepseek-ai/deepseek-harness",
+    "repo": "https://github.com/deepseek-ai/deepseek-harness.git",
     "pinned_by_desktop": true,
+    "channel": "beta",
+    "commit": "a66e4702047846cdaa10c66c9d3df3951f5ea70d",
     "version": "0.1.2-rc.1"
   },
   "policy": "Upgrade only through PR + tests; never follow master/latest automatically."

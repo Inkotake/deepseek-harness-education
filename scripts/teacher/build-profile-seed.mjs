@@ -51,11 +51,21 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'))
 }
 
-/** Minimal Harness home settings; every other default belongs to the Harness itself. */
+/**
+ * Installation-owned Harness home settings; every other default belongs to the Harness itself.
+ *
+ * This is where a distribution pins what a fresh Teacher DSH installation starts from. Teacher
+ * DSH 0.1 ships the compatibility shell with no ordinary-browser and no LAN web surface, so
+ * `openBrowser` and `networkExposure` are written out explicitly instead of relying on the
+ * launcher's absent-document fallback. Both remain user-changeable in the Desktop settings UI.
+ */
 const SETTINGS = [
   '# Teacher DSH defaults. Model configuration stays in the Harness settings UI.',
   'dsh-desktop:',
   '  mode: compatibility',
+  '  # Teacher DSH 0.1 ships no browser/web surface: the renderer uses the loopback server only.',
+  '  openBrowser: false',
+  '  networkExposure: loopback',
   ''
 ].join('\n')
 

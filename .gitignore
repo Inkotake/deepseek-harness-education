@@ -31,3 +31,7 @@ resources/teacher-seed/plugins-built/
 # NOTE: licenses/ is intentionally NOT ignored. It holds the verbatim license text of every
 # dependency the installer bundles (about 2.7 MB), and a public distribution must ship those
 # texts alongside the code - in particular the CC BY-SA 4.0 Education Agent Skills.
+
+# Throwaway probes and scratch scripts must never be committed.
+/tmp-*
+/tmp_*

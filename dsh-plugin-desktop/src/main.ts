@@ -129,6 +129,11 @@ import {
 } from './setup-wizard-settings.ts'
 import type { DesktopSetupWizardResult } from './setup-wizard-contract.ts'
 import { DesktopSetupWizardWindow } from './setup-wizard-window.ts'
+import {
+  TEACHER_DSH_SETUP_OUTCOME,
+  teacherDshMarketSelection,
+  teacherDshSetupWizardRequested,
+} from './installation-defaults.ts'
 import { ProfileCreateWindow } from './profile-create-window.ts'
 import { DesktopProfileSelectionWindow } from './profile-selection-window.ts'
 import { showDesktopDialog } from './desktop-dialog-window.ts'
@@ -776,6 +781,9 @@ async function start(): Promise<void> {
       },
       openCreator: openStartupProfileCreator,
     }
+    // Teacher DSH 0.1 never routes a normal first run through the Profile creator or the Profile
+    // selector: with no Profile on disk this creates and selects the real `desktop` Profile, and
+    // the two wizards stay reserved for the recovery assistant, the tray, and the settings UI.
     const profileStartup = beginDesktopProfileStartup(selectionStatePath, homeDir)
     activeProfileName = profileStartup.profileName
     expectedRecoveryProfileName = activeProfileName
@@ -974,7 +982,11 @@ async function start(): Promise<void> {
     startupStage = 'profile-composition'
     lifecycleRecorder.transitionStartupStage(startupStage)
     const lanAddresses = desktopLanAddresses()
-    const legacyMarketSelection = readDesktopMarketStateForUserData(marketUserDataDir)
+    // Teacher DSH 0.1 ships the plugin Market enabled. Only the "no choice was ever persisted"
+    // state is replaced here, so an explicit selection (including "disabled") is preserved.
+    const legacyMarketSelection = teacherDshMarketSelection(
+      readDesktopMarketStateForUserData(marketUserDataDir),
+    )
     let profilePreferences = readDesktopProfilePreferences(marketUserDataDir, activeProfileDir)
     let marketSelection = profilePreferences === undefined
       ? legacyMarketSelection
@@ -1087,7 +1099,20 @@ async function start(): Promise<void> {
     const setupWizardState = safeModePaths === undefined
       ? readDesktopSetupWizardState(marketUserDataDir, prepared.profile.dir)
       : undefined
-    if (safeModePaths === undefined && desktopSetupWizardRequired(setupWizardState, setupWizardVersions)) {
+    const setupWizardRequired = safeModePaths === undefined
+      && desktopSetupWizardRequired(setupWizardState, setupWizardVersions)
+    // Teacher DSH 0.1 ships first-run Setup already decided: record the shipped decision and boot
+    // straight into the desktop shell. The interactive Wizard branch below stays in the tree and
+    // still runs whenever an installation asks for it (see `installation-defaults.ts`).
+    if (setupWizardRequired && !teacherDshSetupWizardRequested()) {
+      await completeOrSkipDesktopSetupWizard(
+        marketUserDataDir,
+        prepared.profile.dir,
+        TEACHER_DSH_SETUP_OUTCOME,
+        setupWizardVersions,
+      )
+    }
+    if (setupWizardRequired && teacherDshSetupWizardRequested()) {
       const setupSettings = readDesktopSetupWizardSettings(prepared.settingsDocument)
       setupWizardWindow = new DesktopSetupWizardWindow({
         locale: desktopLocaleFromLanguageTag(app.getLocale()),

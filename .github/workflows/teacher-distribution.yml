@@ -60,6 +60,10 @@ jobs:
         shell: pwsh
         run: node scripts/teacher/verify-distribution.mjs
 
+      - name: No credentials or local paths in the tracked tree
+        shell: pwsh
+        run: node scripts/teacher/verify-no-secrets.mjs
+
       - name: Build the artifact SDK tarball
         shell: pwsh
         run: node teacher/scripts/build-toolchain.mjs

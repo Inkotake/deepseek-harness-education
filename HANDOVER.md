@@ -1,7 +1,7 @@
 # Teacher DSH 0.1 工作移交文档
 
 > 本文档描述 Teacher DSH 0.1 **当前已验证的状态**，用于把它完整移交给下一位接手人。
-> 所有路径均以本机绝对路径书写，可整体替换根目录。
+> 本文档中的路径使用 `<repo>`（本仓库根）、`<workspace>`（上层工作目录）与 `%USERPROFILE%` 占位符，请按本机实际位置替换。
 > 构建流水线的规范说明在 `teacher/BUILD.md`，本文只做索引与状态汇报，不重复其内容。
 
 ---
@@ -18,7 +18,7 @@
 ### 1.1 工作仓库（主线）
 
 ```text
-路径：C:\Users\inkot\Desktop\kc\teacher-dsh-desktop
+路径：<repo>
 分支：teacher-dsh-0.1
 origin：https://github.com/anywhere-labs/dsh-desktop.git   （尚未推送到自己的 fork）
 基线：tag v2.0.5 / v2.0.5-beta.1，commit 423406f
@@ -74,7 +74,7 @@ origin：https://github.com/anywhere-labs/dsh-desktop.git   （尚未推送到�
 ### 1.3 旧冻结仓库（仅参考）
 
 ```text
-路径：C:\Users\inkot\Desktop\kc\teacher-dsh
+路径：<workspace>\teacher-dsh
 分支：main
 tag：legacy-teacher-skeleton
 commit：6250bfb
@@ -345,7 +345,7 @@ macOS / Linux 的打包没有产出（`electron-builder` 的 mac/linux target �
 - `teacher/pnpm-workspace.yaml` 会被 pnpm 自动追加 `minimumReleaseAgeExclude`（mermaid / @mermaid-js/parser）。
   可以保留，但注意别让它在干净机器上触发 policy 报错。
 - corepack 首次下载 yarn 会交互，脚本里统一设 `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`。
-- 若本机 `~/.gitconfig` 配了 HTTP 代理且该代理不可用，clone GitHub 会挂；临时绕过用
+- 本机 `~/.gitconfig` 配了 `http.proxy=http://127.0.0.1:10808` 且该代理经常不可用；clone GitHub 用
   `git -c http.proxy= -c https.proxy= clone ...`，`scripts/teacher/vendor-*.mjs` 已内置该 override。
 - 旧仓库工作区里的 `git-commit.log`、`legacy.tar` 可以直接删。
 
@@ -431,7 +431,7 @@ macOS / Linux 的打包没有产出（`electron-builder` 的 mac/linux target �
 ### 7.1 发行构建与验证
 
 ```powershell
-cd C:\Users\inkot\Desktop\kc\teacher-dsh-desktop
+cd <repo>
 
 # 全量构建（细节见 teacher\BUILD.md）
 node scripts\teacher\build-teacher-runtime.mjs
@@ -479,30 +479,30 @@ node scripts\teacher\smoke-package.mjs
 $tmp = "$env:TEMP\tdsh-check"; Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 Set-Location $tmp
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\artifact-cli\bin\teacher-artifact.mjs init demo --template three
+node <repo>\teacher\packages\artifact-cli\bin\teacher-artifact.mjs init demo --template three
 Set-Location demo
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\artifact-cli\bin\teacher-artifact.mjs build
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\artifact-cli\bin\teacher-artifact.mjs check
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\artifact-cli\bin\teacher-artifact.mjs preview --open
+node <repo>\teacher\packages\artifact-cli\bin\teacher-artifact.mjs build
+node <repo>\teacher\packages\artifact-cli\bin\teacher-artifact.mjs check
+node <repo>\teacher\packages\artifact-cli\bin\teacher-artifact.mjs preview --open
 ```
 
 ### 7.3 publish-cli
 
 ```powershell
 cd <一个已 build 的 artifact 目录>
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\publish-cli\bin\teacher-publish.mjs detect
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\publish-cli\bin\teacher-publish.mjs inspect --json
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\publish-cli\bin\teacher-publish.mjs plan --mode quick-share
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\publish-cli\bin\teacher-publish.mjs deploy --mode quick-share --auto
+node <repo>\teacher\packages\publish-cli\bin\teacher-publish.mjs detect
+node <repo>\teacher\packages\publish-cli\bin\teacher-publish.mjs inspect --json
+node <repo>\teacher\packages\publish-cli\bin\teacher-publish.mjs plan --mode quick-share
+node <repo>\teacher\packages\publish-cli\bin\teacher-publish.mjs deploy --mode quick-share --auto
 # 离线契约 smoke（不联网）
-node C:\Users\inkot\Desktop\kc\teacher-dsh-desktop\teacher\packages\publish-cli\tools\smoke.mjs <artifact-dir>
+node <repo>\teacher\packages\publish-cli\tools\smoke.mjs <artifact-dir>
 ```
 
 ### 7.4 Desktop 侧
 
 ```powershell
 $env:COREPACK_ENABLE_DOWNLOAD_PROMPT='0'
-cd C:\Users\inkot\Desktop\kc\teacher-dsh-desktop
+cd <repo>
 corepack yarn install --immutable
 corepack yarn check          # typecheck + 测试 + 上游 gate
 corepack yarn dev            # 开发模式启动
@@ -542,7 +542,7 @@ git -c http.proxy= -c https.proxy= fetch --tags
 
 建议严格按顺序做：
 
-1. [ ] `cd C:\Users\inkot\Desktop\kc\teacher-dsh-desktop; git status` — 读 1.2 节，review 当时那组未提交的
+1. [ ] `cd <repo>; git status` — 读 1.2 节，review 当时那组未提交的
        瘦身改动（`build-teacher-runtime.mjs` 的 `stepPrune`、`build-profile-seed.mjs` 复用同一条规则、
        CI 加的两步）；确认无误后提交，它们会显著影响安装包体积。
 2. [ ] 读 `teacher/BUILD.md`（构建流水线的唯一权威说明），再读本文件第 5 节。

@@ -1,20 +1,67 @@
-name: upstream-watch
+name: upstream-watch (upstream Harness/Desktop pins, not this fork)
+
+# Watches the *upstream* pins this fork builds on. It never watches, tests, or publishes this
+# fork's own commits: `upstream.json` holds the pinned deepseek-harness revision, and
+# `teacher/manifests/desktop-upstream.lock.json` records those pins for the distribution.
+#
+# Runs nightly and on demand, and always opens a pull request instead of pushing to the default
+# branch. A newer upstream Harness or Desktop stays a reviewed, tested change; nothing here
+# follows upstream master/latest automatically.
+
 on:
   schedule:
     - cron: '17 0 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      desktop_commit:
+        description: 'Upstream anywhere-labs/dsh-desktop revision to record (full 40-char SHA)'
+        required: false
+        type: string
+
 permissions:
   contents: write
   pull-requests: write
+
+concurrency:
+  group: upstream-watch-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  watch:
+  watch-upstream-pins:
+    name: watch upstream Harness/Desktop pins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Check upstream releases
-        run: node scripts/teacher/sync-upstream.mjs
-      - name: Create PR on change
+      - name: Check out this fork as the read-only basis for the upstream pin files
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Record the pinned upstream Harness revision and upstream Desktop baseline
+        env:
+          DESKTOP_COMMIT: ${{ github.event.inputs.desktop_commit }}
+        run: |
+          if [ -n "$DESKTOP_COMMIT" ]; then
+            node scripts/teacher/sync-upstream.mjs --desktop-commit "$DESKTOP_COMMIT"
+          else
+            node scripts/teacher/sync-upstream.mjs
+          fi
+
+      - name: Show the upstream pins under watch
+        run: cat teacher/manifests/desktop-upstream.lock.json
+
+      - name: Open a pull request when an upstream pin changed (never push the default branch)
         uses: peter-evans/create-pull-request@v7
         with:
-          title: 'chore(upstream): upstream pins changed'
-          branch: 'chore/upstream-sync'
+          base: ${{ github.event.repository.default_branch }}
+          branch: chore/upstream-sync
+          delete-branch: true
+          title: 'chore(upstream): pinned upstream Harness/Desktop revision changed'
+          commit-message: 'chore(upstream): refresh the recorded upstream Harness/Desktop pins'
+          body: |
+            The recorded upstream revisions this fork builds on changed.
+
+            - Upstream Harness pin (from `upstream.json`): `harness.commit`, `harness.version`
+            - Upstream Desktop baseline (operator-supplied): `desktop.commit`
+
+            This pull request only records upstream pins; it does not modify this fork's own
+            behaviour. Review it, run the distribution gate, and merge deliberately.

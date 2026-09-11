@@ -944,10 +944,14 @@ virtualStoreDirMaxLength: 60
       id: 'sandbox',
       name: '@deepseek-ai/dsh-sandbox-local',
     })
+    // The non-advanced modes offer the standard and education presets only, which needs a
+    // materialized root: `dsh-agent-presets` exposes no per-preset filter, so the shipped roster is
+    // turned off and its `standard` is copied into the teacher root alongside our `education` one.
     expect(rows.find(row => row.id === 'agent-presets')).toEqual(expect.objectContaining({
       name: '@deepseek-ai/dsh-agent-presets',
       config: expect.objectContaining({
-        roots: [{ path: shippedPresetRoot(), trust: 'system' }],
+        includeShippedRoot: false,
+        roots: [{ path: join(home, 'teacher-presets'), trust: 'system' }],
       }),
     }))
     expect(rows.find(row => row.id === 'agent-presets')?.disabled).toBeFalsy()

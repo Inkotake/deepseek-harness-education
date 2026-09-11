@@ -29,6 +29,7 @@ import FileSettingsProvider, {
   type Config as SettingsFileConfig,
 } from '@deepseek-ai/dsh-settings-file'
 import { parseAllDocuments, parseDocument } from 'yaml'
+import { materializeTeacherPresetRoot } from './agent-preset-teacher.ts'
 import { unpackedAsarPath } from './packaged-runtime-path.ts'
 import { findOverlayPackage, resolveOverlayPackage } from './package-overlay.ts'
 import { DESKTOP_DEFAULT_WEB_PORT } from './desktop-port.ts'
@@ -550,6 +551,16 @@ export function shippedPresetRoot(moduleUrl: string = import.meta.url): string {
   )
 }
 
+/**
+ * Resolve this package's own preset directory, which holds the presets the distribution authors.
+ *
+ * `lib/profile-<hash>.js` and `src/profile.ts` both sit one level under the package root, so the same
+ * relative hop resolves in the built and source planes.
+ */
+export function teacherPresetSource(moduleUrl: string = import.meta.url): string {
+  return unpackedAsarPath(fileURLToPath(new URL('../presets/', moduleUrl)))
+}
+
 /** Read a row's object config without trusting arbitrary YAML values. */
 function rowConfig(row: EntryOptions | undefined): Record<string, unknown> {
   const config = row?.config
@@ -973,10 +984,26 @@ export function prepareDesktopProfile(
   }
   const presets = rows.get(AGENT_PRESETS_ROW_ID)
   if (presets !== undefined) {
-    const config = {
-      ...rowConfig(presets),
-      roots: [{ path: shippedPresetRoot(), trust: 'system' }],
-    }
+    // Advanced mode keeps the shipped roster: an operator there is choosing between the runtime's own
+    // compositions. Every other mode offers the two a teacher actually picks between, which needs a
+    // materialized root because `dsh-agent-presets` has no per-preset filter to hide the rest with.
+    const teacherPresets = mode === 'advanced'
+      ? undefined
+      : materializeTeacherPresetRoot({
+        homeDir: home,
+        shippedRoot: shippedPresetRoot(),
+        teacherSource: teacherPresetSource(),
+      })
+    const config = teacherPresets === undefined
+      ? {
+          ...rowConfig(presets),
+          roots: [{ path: shippedPresetRoot(), trust: 'system' }],
+        }
+      : {
+          ...rowConfig(presets),
+          includeShippedRoot: false,
+          roots: [{ path: teacherPresets, trust: 'system' }],
+        }
     patches.push({ id: AGENT_PRESETS_ROW_ID, config })
   }
   const webserver = rows.get('webserver')

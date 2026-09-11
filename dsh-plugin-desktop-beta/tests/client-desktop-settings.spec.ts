@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -14,12 +14,15 @@ import {
   selectDesktopFrameMode,
 } from '../src/client/ExtendedTitlebar.tsx'
 import {
+  desktopAdvancedModeTarget,
   desktopBrowserUrlsShouldRender,
+  DesktopAdvancedModeRow,
   DesktopSettingsSection,
   persistDesktopBrowserAccessHot,
   persistDesktopNetworkExposureHot,
   readDesktopSettingsUntilLanSettled,
   resolveDesktopLanConfirmation,
+  type DesktopShellSettings,
 } from '../src/client/DesktopSettingsSection.tsx'
 import { DesktopTerminalSettingsAction } from '../src/client/DesktopTerminalSettingsAction.tsx'
 import {
@@ -218,6 +221,24 @@ describe('Desktop settings API', () => {
     expect(en.lanWarningBody).toContain('local CA')
     expect(Object.keys(zh)).not.toContain('lanHttpsUnavailable')
     expect(Object.keys(zh)).not.toContain('lanUrlsAfterRestart')
+  })
+
+  it('names the General-section Advanced mode switch and states what it composes', () => {
+    // Teacher DSH 0.1: the switch replaces the skipped wizard's shell-mode decision, so its
+    // copy must name the mode, the presentation bundle it composes, and the restart it needs.
+    expect(zh.advancedModeToggle).toBe('高级模式')
+    expect(en.advancedModeToggle).toBe('Advanced mode')
+    expect(zh.advancedModeToggleBody).toContain('轨迹')
+    expect(zh.advancedModeToggleBody).toContain('打开配置文件')
+    expect(zh.advancedModeToggleBody).toMatch(/重启/u)
+    expect(zh.advancedModeToggleBody).not.toMatch(/自动重启/u)
+    expect(en.advancedModeToggleBody).toMatch(/trajectory/iu)
+    expect(en.advancedModeToggleBody).toMatch(/open-config-file/iu)
+    expect(en.advancedModeToggleBody).toMatch(/presentation bundle/iu)
+    expect(en.advancedModeToggleBody).toMatch(/restart/iu)
+    expect(en.advancedModeToggleBody).not.toMatch(/restarts automatically/iu)
+    expect(zh.advancedModeToggleUnavailable).toBe('高级模式目前支持 macOS 和 Windows。')
+    expect(en.advancedModeToggleUnavailable).toBe('Advanced mode is currently available on macOS and Windows.')
   })
 
   it('briefly polls a starting LAN edge and stops at its first terminal state', async () => {
@@ -654,7 +675,118 @@ describe('Desktop settings Slot registration', () => {
     })
     expect(actionOptions.inject()).toHaveProperty('api')
     expect(actionComponent).toBe(DesktopTerminalSettingsAction)
+
+    const [advancedOptions, advancedComponent] = register.mock.calls[2] as unknown as [
+      { id: string; order: number; locale: string; inject: () => Record<string, unknown> },
+      unknown,
+    ]
+    expect(inject).toHaveBeenCalledWith('settings.general.item', expect.any(Function))
+    expect(advancedOptions).toMatchObject({
+      name: 'settings.general.item',
+      id: 'desktop-advanced-mode',
+      order: 30,
+      locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
+    })
+    expect(advancedOptions.inject()).toMatchObject({
+      platform: 'darwin',
+      initialMode: 'compatibility',
+      setMode: expect.any(Function),
+    })
+    expect(advancedOptions.inject()).toHaveProperty('desktopSettings', scope)
+    expect(advancedComponent).toBe(DesktopAdvancedModeRow)
     await control.setMode('extended')
     expect(scope.set).toHaveBeenCalledWith('mode', 'extended')
+  })
+})
+
+describe('Desktop General-section Advanced mode row', () => {
+  const ADVANCED_SHELL_SETTINGS: DesktopShellSettings = {
+    mode: 'compatibility',
+    macosMaterial: 'off',
+    windowsMaterial: 'off',
+    port: 43_120,
+    openBrowser: false,
+    networkExposure: 'loopback',
+    logLevel: 'info',
+  }
+
+  const shellScope = (
+    mode: DesktopShellSettings['mode'],
+    state: { status: 'loading' | 'ready' | 'unavailable', writable: boolean } = {
+      status: 'ready',
+      writable: true,
+    },
+  ): SettingsScope<DesktopShellSettings> => ({
+    getSnapshot: () => ({
+      status: state.status,
+      value: state.status === 'ready' ? { ...ADVANCED_SHELL_SETTINGS, mode } : undefined,
+      base: undefined,
+      user: undefined,
+      revision: 3,
+      writable: state.writable,
+      mode: 'host',
+    }),
+    subscribe: () => () => {},
+    set: vi.fn(async () => {}),
+    unset: vi.fn(async () => {}),
+    mutate: vi.fn(async () => {}),
+  })
+
+  /** Server-render the row with only the shares this component reads. */
+  const renderRow = (input: {
+    mode: DesktopShellSettings['mode']
+    platform: 'darwin' | 'win32' | 'linux'
+    t: (key: DesktopSettingsLocaleKey) => string
+    initialMode?: DesktopShellSettings['mode']
+    scope?: SettingsScope<DesktopShellSettings>
+    setMode?: (mode: DesktopShellSettings['mode']) => Promise<void>
+  }): string => renderToStaticMarkup(createElement(
+    DesktopAdvancedModeRow as unknown as (props: Record<string, unknown>) => ReactNode,
+    {
+      t: input.t,
+      platform: input.platform,
+      initialMode: input.initialMode ?? 'compatibility',
+      desktopSettings: input.scope ?? shellScope(input.mode),
+      setMode: input.setMode ?? vi.fn(async () => {}),
+    } as Record<string, unknown>,
+  ))
+
+  const zhT = (key: DesktopSettingsLocaleKey): string => zh[key]
+
+  it('renders the 高级模式 switch with the advanced bundle and restart facts', () => {
+    const markup = renderRow({ mode: 'compatibility', platform: 'darwin', t: zhT })
+
+    expect(markup).toContain('dshDesktopSettingsGeneralItem')
+    expect(markup).toContain('高级模式')
+    expect(markup).toContain('轨迹')
+    expect(markup).toContain('打开配置文件')
+    expect(markup).toContain('重启')
+    expect(markup).toContain('role="switch"')
+    expect(markup).toContain('aria-checked="false"')
+    expect(markup).not.toContain('disabled=""')
+  })
+
+  it('reflects the persisted mode, not the requested one', () => {
+    expect(renderRow({ mode: 'advanced', platform: 'win32', t: zhT }))
+      .toContain('aria-checked="true"')
+    expect(renderRow({
+      mode: 'advanced',
+      initialMode: 'advanced',
+      platform: 'win32',
+      t: zhT,
+      scope: shellScope('compatibility', { status: 'loading', writable: false }),
+    })).toContain('aria-checked="true"')
+  })
+
+  it('disables the switch on linux and keeps the reason visible', () => {
+    const markup = renderRow({ mode: 'compatibility', platform: 'linux', t: zhT })
+
+    expect(markup).toContain('disabled=""')
+    expect(markup).toContain('高级模式目前支持 macOS 和 Windows。')
+  })
+
+  it('maps the switch position onto the existing dsh-desktop mode values', () => {
+    expect(desktopAdvancedModeTarget(true)).toBe('advanced')
+    expect(desktopAdvancedModeTarget(false)).toBe('compatibility')
   })
 })

@@ -3,7 +3,7 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { DesktopSettingsSection, type DesktopNotificationSettings, type DesktopShellSettings } from './DesktopSettingsSection.tsx'
+import { DesktopAdvancedModeRow, DesktopSettingsSection, type DesktopNotificationSettings, type DesktopShellSettings } from './DesktopSettingsSection.tsx'
 import { DesktopTerminalSettingsAction } from './DesktopTerminalSettingsAction.tsx'
 import { createDesktopSettingsApi } from './desktop-settings-api.ts'
 import { en, zh, type DesktopSettingsLocaleKey } from './desktop-settings-locales.ts'
@@ -101,6 +101,23 @@ export function applyDesktopSettings(
     locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
     inject: () => ({ api }),
   }, DesktopTerminalSettingsAction))
+  // Teacher DSH 0.1 decision: the Desktop Setup Wizard is skipped on first run, so the
+  // `advanced` shell mode had no reachable control. This additive row is the
+  // General-section switch for the existing `dsh-desktop.mode` value: it persists the
+  // same field the Desktop page's presentation choices write, and the Host's settings
+  // watcher asks for the restart that composes the advanced presentation bundle.
+  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+    name: 'settings.general.item',
+    id: 'desktop-advanced-mode',
+    order: 30,
+    locale: DESKTOP_SETTINGS_LOCALE_NAMESPACE,
+    inject: () => ({
+      desktopSettings,
+      initialMode: environment.mode,
+      platform: environment.platform,
+      setMode,
+    }),
+  }, DesktopAdvancedModeRow))
 
   return Object.freeze({
     api,

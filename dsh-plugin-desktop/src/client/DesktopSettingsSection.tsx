@@ -140,6 +140,17 @@ export function desktopBrowserUrlsShouldRender(
   return browserAccess
 }
 
+/**
+ * Shell mode one Advanced mode switch position requests.
+ * @param checked - switch position; on means the advanced presentation bundle.
+ * @returns the exact `dsh-desktop.mode` value persisted for that position.
+ */
+export function desktopAdvancedModeTarget(
+  checked: boolean,
+): Extract<DesktopShellSettings['mode'], 'compatibility' | 'advanced'> {
+  return checked ? 'advanced' : 'compatibility'
+}
+
 /** Keep cancellation side-effect free; only explicit confirmation enables LAN. */
 export function resolveDesktopLanConfirmation(
   confirmed: boolean,
@@ -153,7 +164,11 @@ export function resolveDesktopLanConfirmation(
 function useScope<T>(scope: SettingsScope<T>) {
   const subscribe = useCallback((listener: () => void) => scope.subscribe(listener), [scope])
   const snapshot = useCallback(() => scope.getSnapshot(), [scope])
-  return useSyncExternalStore(subscribe, snapshot)
+  // A server snapshot keeps a scope-reading row renderable outside the browser
+  // (the real renderer is the only client), which is how the General-section row
+  // is asserted in tests.
+  const serverSnapshot = useCallback(() => scope.getSnapshot(), [scope])
+  return useSyncExternalStore(subscribe, snapshot, serverSnapshot)
 }
 
 function Choice({
@@ -262,6 +277,100 @@ function ToggleRow({
 function profileState(profile: DesktopProfileView, t: Translate): string {
   if (!profile.exists || !profile.webCapable || !profile.selectable) return t('profileUnavailable')
   return t('profileReady')
+}
+
+/** Registration-side business face for the General-section Advanced mode switch. */
+export interface DesktopAdvancedModeRowInjected {
+  /** Live browser view of the Host `dsh-desktop` settings namespace. */
+  readonly desktopSettings: SettingsScope<DesktopShellSettings>
+  /** Shell mode the running generation was composed with. */
+  readonly initialMode: DesktopShellSettings['mode']
+  /** Platform gate: custom shell modes are macOS and Windows only. */
+  readonly platform: DesktopClientPlatform
+  /** Persist the mode with the same ordered writes the Desktop page uses. */
+  readonly setMode: (mode: DesktopShellSettings['mode']) => Promise<void>
+}
+
+/** Renderer-composed props for the General-section Advanced mode switch. */
+export type DesktopAdvancedModeRowProps =
+  PropsRuntime<'settings.general.item'>
+  & PropsLocale<'desktop.settings'>
+  & InjectFace<DesktopAdvancedModeRowInjected>
+
+/**
+ * Render the Teacher DSH 0.1 Advanced mode switch inside the official General
+ * settings section.
+ *
+ * The wizard that used to select the shell mode is skipped on first run, so
+ * this row is the discoverable way to reach `advanced`. It writes the existing
+ * `dsh-desktop.mode` value through the standard settings scope — no parallel
+ * flag — and states the truth about when that takes effect: the composed
+ * presentation bundle (and with it the trajectory menu and the
+ * open-config-file actions) is built when the next generation starts, and the
+ * Host's settings watcher asks the user to restart rather than applying the
+ * mode live.
+ * @param props - composed slot props.
+ * @returns the General-section switch row.
+ */
+export function DesktopAdvancedModeRow({
+  t,
+  desktopSettings,
+  initialMode,
+  platform,
+  setMode: persistMode,
+}: DesktopAdvancedModeRowProps) {
+  const desktop = useScope(desktopSettings)
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [restartRequired, setRestartRequired] = useState(false)
+  const labelId = useId()
+  const advanced = (desktop.value?.mode ?? initialMode) === 'advanced'
+  const disabled = platform === 'linux'
+    || desktop.status !== 'ready'
+    || !desktop.writable
+    || busy
+  const toggle = (checked: boolean): void => {
+    setBusy(true)
+    setFailed(false)
+    void (async () => {
+      try {
+        await persistMode(desktopAdvancedModeTarget(checked))
+        setRestartRequired(true)
+      } catch {
+        setFailed(true)
+      } finally {
+        setBusy(false)
+      }
+    })()
+  }
+  return (
+    <div className="dshDesktopSettingsGeneralItem">
+      <div className="dshDesktopSettingsGeneralRow">
+        <span className="dshDesktopSettingsGeneralRowText">
+          <span className="dshDesktopSettingsGeneralRowTitle" id={labelId}>{t('advancedModeToggle')}</span>
+          <span className="dshDesktopSettingsGeneralRowDesc">{t('advancedModeToggleBody')}</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          className="dshDesktopSettingsToggle"
+          aria-checked={advanced}
+          aria-labelledby={labelId}
+          disabled={disabled}
+          onClick={() => { toggle(!advanced) }}
+        >
+          <span className="dshDesktopSettingsToggleKnob" aria-hidden="true" />
+        </button>
+      </div>
+      {platform === 'linux' && (
+        <p className="dshDesktopSettingsNotice">{t('advancedModeToggleUnavailable')}</p>
+      )}
+      {failed && <p className="dshDesktopSettingsError" role="alert">{t('operationFailed')}</p>}
+      {restartRequired && (
+        <p className="dshDesktopSettingsSuccess" role="status">{t('restartRequired')}</p>
+      )}
+    </div>
+  )
 }
 
 const MARKET_OPTIONS: readonly {

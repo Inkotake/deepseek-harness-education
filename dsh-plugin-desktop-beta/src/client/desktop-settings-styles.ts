@@ -361,6 +361,41 @@ const CSS = `
 .dshDesktopSettingsDialog h3 { margin: 0; color: var(--dsw-alias-state-error-primary); font-size: 16px; }
 .dshDesktopSettingsDialog p { margin: 12px 0 0; color: var(--dsw-alias-label-secondary); font-size: 13px; line-height: 1.65; }
 .dshDesktopSettingsDialogActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+/* General-section row (settings.general.item): the official section stacks plain rows
+   that draw their own divider, so this row follows the shipped row rhythm instead of
+   the card look used inside the Desktop page. */
+.dshDesktopSettingsGeneralItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-bottom: .5px solid var(--dsw-alias-border-l2);
+}
+.dshDesktopSettingsGeneralRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dshDesktopSettingsGeneralRowText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-right: 48px;
+}
+.dshDesktopSettingsGeneralRowTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+}
+.dshDesktopSettingsGeneralRowDesc {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
 @media (max-width: 720px) {
   .dshDesktopSettingsChoice,
   .dshDesktopSettingsToggleRow { align-items: flex-start; }

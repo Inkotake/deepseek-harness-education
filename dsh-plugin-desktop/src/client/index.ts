@@ -13,6 +13,9 @@ import { applyDesktopSettings } from './desktop-settings.ts'
 import { installDesktopDirectoryPickerBridge } from './directory-picker.ts'
 import { parseDesktopClientEnvironment } from './environment.ts'
 import { applyExtendedShell, applyFramedShell } from './extended-shell.ts'
+import { applyRiskConfirmationStyles } from './risk-dialog-styles.ts'
+import { applyFullAccessWarningCopy } from './teacher-copy-overrides.ts'
+import { applyWelcomeNoticeSuppression } from './welcome-notice-suppression.ts'
 import { desktopWindowService, provideDesktopWindow } from './window-service.ts'
 
 export { applyAdvancedShell } from './advanced-shell.ts'
@@ -82,6 +85,13 @@ export const inject = [
 export function apply(ctx: ClientContext): void {
   const environment = parseDesktopClientEnvironment(window.location.search)
   if (!environment) return
+  // Teacher DSH 0.1 ships without the internal-testing onboarding notice, with a
+  // detailed Full access warning instead of the vendored one-liner, and with that
+  // warning's list layout kept. All three are additive and reversible: each rides
+  // a Cordis effect (or a slot contribution) owned by this fiber.
+  applyWelcomeNoticeSuppression(ctx)
+  applyFullAccessWarningCopy(ctx)
+  applyRiskConfirmationStyles(ctx)
   ctx.effect(
     () => provideDesktopWindow(ctx, desktopWindowService(environment)),
     'dsh-plugin-desktop: native window geometry service',

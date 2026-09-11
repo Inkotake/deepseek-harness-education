@@ -466,10 +466,13 @@ virtualStoreDirMaxLength: 60
     const rows = composeEntries([prepared.patches])
 
     expect(prepared.market.effective).toBe('community-market')
-    expect(rows.filter(row => row.id === DESKTOP_MARKET_IDENTITIES.community.rowId)).toEqual([{
-      id: DESKTOP_MARKET_IDENTITIES.community.rowId,
-      name: DESKTOP_MARKET_IDENTITIES.community.packageName,
-    }])
+    // The row is composed with that identity; standard mode additionally disables it, which this
+    // case does not assert because it is about selection, not presentation.
+    expect(rows.filter(row => row.id === DESKTOP_MARKET_IDENTITIES.community.rowId))
+      .toContainEqual(expect.objectContaining({
+        id: DESKTOP_MARKET_IDENTITIES.community.rowId,
+        name: DESKTOP_MARKET_IDENTITIES.community.packageName,
+      }))
     expect(rows.some(row => row.id === DESKTOP_MARKET_IDENTITIES.dshMarket.rowId)).toBe(false)
   })
 
@@ -498,10 +501,11 @@ virtualStoreDirMaxLength: 60
     expect(prepared.profile.layers.find(layer =>
       layer.packageName === DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)?.packageDir,
     ).toBe(profileMarketDir)
-    expect(rows.filter(row => row.id === DESKTOP_MARKET_IDENTITIES.dshMarket.rowId)).toEqual([{
-      id: DESKTOP_MARKET_IDENTITIES.dshMarket.rowId,
-      name: DESKTOP_MARKET_IDENTITIES.dshMarket.packageName,
-    }])
+    expect(rows.filter(row => row.id === DESKTOP_MARKET_IDENTITIES.dshMarket.rowId))
+      .toContainEqual(expect.objectContaining({
+        id: DESKTOP_MARKET_IDENTITIES.dshMarket.rowId,
+        name: DESKTOP_MARKET_IDENTITIES.dshMarket.packageName,
+      }))
     expect(rows.some(row => row.id === DESKTOP_MARKET_IDENTITIES.community.rowId)).toBe(false)
   })
 

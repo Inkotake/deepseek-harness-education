@@ -71,6 +71,16 @@ const SETTINGS = [
   '  # Teacher DSH 0.1 ships no browser/web surface: the renderer uses the loopback server only.',
   '  openBrowser: false',
   '  networkExposure: loopback',
+  '# Curated sidebar for the teacher-facing default.',
+  '#',
+  '# `tabsEnabled: false` HIDES a tab type without deleting it: it leaves the + menu, openTab refuses',
+  '# it, and the tab can be turned back on from the plugin\'s own settings or by editing this file.',
+  '# The change list and the diff view are the two a teacher does not read, and version history stays',
+  '# available to the agent instead (see the education preset): the file manager stays visible.',
+  'dsh-better-sidebar:',
+  '  tabsEnabled:',
+  '    git: false',
+  '    diff: false',
   ''
 ].join('\n')
 

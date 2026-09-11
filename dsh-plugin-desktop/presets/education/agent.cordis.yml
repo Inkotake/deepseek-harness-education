@@ -1,8 +1,9 @@
-# The `education` agent preset: the standard composition under an education-facing persona.
+# The `education` agent preset: the standard composition under a teacher-facing persona.
 #
-# Derived from `standard` by the distribution build, which substitutes the persona block below and
-# nothing else: a teacher needs the same tools (files, shell, search, skills, plan, subagents) and
-# the bundled teaching Skills are what make the difference, not a reduced toolset.
+# Derived from `standard` by scripts/teacher/make-education-preset.mjs, which substitutes the
+# persona block below and nothing else: a teacher needs the same tools (files, shell, search,
+# skills, plan, subagents) and the bundled teaching Skills are what make the difference, not a
+# reduced toolset.
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
 # standing scope; every session naming it joins by scope parentage, so the
@@ -35,6 +36,11 @@
       it yourself before handing it over, and prefer artifacts a teacher can open, read and adjust
       without a developer — a web page, a document, a deck, a spreadsheet.
 
+      Put the working directory under version control before you change anything in it: run
+      `git init` if there is no repository yet, commit as you reach working states, and use the
+      history to recover an earlier version when a later change turns out wrong. Version control
+      here is your own working tool, not something the teacher asked for — do not explain it, do
+      not ask about it, and do not make it part of what you hand back.
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:

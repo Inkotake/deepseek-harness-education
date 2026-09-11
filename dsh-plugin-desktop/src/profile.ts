@@ -84,6 +84,9 @@ const DESKTOP_PATCH_PATH = fileURLToPath(new URL('../cordis.patch.yml', import.m
 const PWSH_SANDBOX_ROW_ID = 'pwsh-sandbox'
 /** Alternate agent-activity view; an operator tool the Advanced toggle gates. */
 const TRAJECTORY_ROW_ID = 'ui-trajectory'
+/** Plugin inventory: the host registry row and the settings tab that reads it. */
+const PLUGIN_INVENTORY_ROW_ID = 'plugin-inventory'
+const PLUGIN_INVENTORY_SURFACE_ROW_ID = 'ui-settings-plugin-inventory'
 const DIRECTORY_PICKER_ROW_ID = 'directory-picker'
 const AUTO_PICKER_PACKAGE = '@deepseek-ai/dsh-host-directory-picker-auto'
 const BROWSE_PICKER_BACKEND = '@deepseek-ai/dsh-host-directory-picker-browse'
@@ -1016,12 +1019,19 @@ export function prepareDesktopProfile(
       : { ...rowConfig(presets), includeShippedRoot: false, roots }
     patches.push({ id: AGENT_PRESETS_ROW_ID, config })
   }
-  // The trajectory view presents request-level provenance for an operator. The Advanced toggle's own
-  // copy has always promised this menu only in that mode, and it was never actually gated. Disabling
-  // the row is safe here in a way it was not for `ui-layout`: this package consumes services and
-  // registers one view, so nothing else resolves through it.
-  if (mode !== 'advanced' && rows.get(TRAJECTORY_ROW_ID) !== undefined) {
-    patches.push({ id: TRAJECTORY_ROW_ID, disabled: true })
+  // Standard mode is the teacher-facing default and presents a curated surface; Advanced mode
+  // reveals the operator tools. Every row below only CONSUMES services or registers a view, so
+  // disabling it removes that surface without taking another package down with it — which is what
+  // went wrong when this file disabled `ui-layout`, whose root slot everything else registers into.
+  if (mode !== 'advanced') {
+    for (const rowId of [
+      TRAJECTORY_ROW_ID,
+      PLUGIN_INVENTORY_ROW_ID,
+      PLUGIN_INVENTORY_SURFACE_ROW_ID,
+      ...MARKET_ROW_IDS,
+    ]) {
+      if (rows.has(rowId)) patches.push({ id: rowId, disabled: true })
+    }
   }
   const webserver = rows.get('webserver')
   if (webserver === undefined) {

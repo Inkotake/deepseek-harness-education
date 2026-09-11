@@ -507,6 +507,16 @@ export interface MemoryRecord {
   readonly updated_at: string
   /** ISO-8601 instant this record stopped being used. `null` for stable records. */
   readonly expires_at: string | null
+  /**
+   * ISO-8601 instant a correction retired this record.
+   *
+   * A retired record leaves retrieval permanently and is never re-confirmed. This is
+   * deliberately not `expires_at`: an expired value may still hold, so the teacher is
+   * offered it back as a default, whereas a retired value was wrong and offering it
+   * again would re-ask a question the teacher already answered. The row survives so
+   * the correction keeps its audit trail.
+   */
+  readonly retired_at?: string | null
   /** ISO-8601 instant a teacher or extractor last confirmed the value still holds. */
   readonly last_confirmed_at?: string
   /** True when the teacher pinned this value through the control surface. */
@@ -907,6 +917,17 @@ export function memoryTtlFor(scope: MemoryScope, fromIso: string): MemoryTtlPoli
 export function isExpired(record: MemoryRecord, nowIso: string): boolean {
   if (record.expires_at === null) return false
   return Date.parse(record.expires_at) <= Date.parse(nowIso)
+}
+
+/**
+ * Whether a record was retired by a correction. A retired record is never
+ * retrieved and never re-confirmed; it survives only as an audit record, so
+ * every read path must filter it out rather than treat it as a stale value.
+ * @param record - the record to test.
+ * @returns true when a correction retired this record.
+ */
+export function isRetired(record: MemoryRecord): boolean {
+  return record.retired_at !== undefined && record.retired_at !== null
 }
 
 /**

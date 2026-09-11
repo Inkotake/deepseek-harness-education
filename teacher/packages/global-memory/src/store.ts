@@ -2,10 +2,9 @@
  * The durable store: every read and write the six tools and the step listener
  * perform (README §4, §9, §12).
  *
- * Persistence is `storageDomain` and nothing else (plan §四 P0-3: 持久化走 DSH 的
- * `storageDomain`，不自己造库). The store takes the three handles the opened
- * domain exposes — the `memories` table, the `question_ledger` table, and the
- * `meta` global — and never touches the medium. Reads are synchronous from the
+ * Persistence is `storageDomain` and nothing else (plan §�?P0-3: 持久化走 DSH �? * `storageDomain`，不自己造库). The store takes the three handles the opened
+ * domain exposes �?the `memories` table, the `question_ledger` table, and the
+ * `meta` global �?and never touches the medium. Reads are synchronous from the
  * domain's in-memory state (`storage-domain/src/domain.ts:1-10`), which is what
  * lets retrieval run inside an `agent/pre-step` listener with no async hop;
  * writes queue on the domain's single write chain and are durable before memory
@@ -19,7 +18,7 @@
  * 2. A `stableKeys: false` field may never be written as `stable`, and no field
  *    may be written with a scope type its declaration does not allow.
  * 3. A model-facing record never carries the evidence locator, the durable
- *    evidence sentence, or the session-suppression field — see
+ *    evidence sentence, or the session-suppression field �?see
  *    {@link MemoryRecordWire}.
  *
  * @module @teacher-dsh/global-memory/src/store
@@ -31,6 +30,7 @@ import {
   confidenceValue,
   isExpired,
   isLongTermEligible,
+  isRetired,
   memoryTtlFor,
   reconfirmationFor,
   schoolYearOf,
@@ -113,7 +113,7 @@ export interface MemoryUpdateRequest extends MemoryUpdateInput {
 export interface MemoryViewFilter {
   /** Instant the read is evaluated at. */
   readonly nowIso: string
-  /** Session whose 本次不要用 marks are hidden. */
+  /** Session whose 本次不要�?marks are hidden. */
   readonly session_ref?: string
   /** Include records whose value may no longer hold, with a re-confirmation. */
   readonly include_expired?: boolean
@@ -334,7 +334,9 @@ export class MemoryStore {
   }
 
   /**
-   * Every stored row, in durable key order, including expired and suppressed rows.
+   * Every stored row, in durable key order, including expired, suppressed and
+   * retired rows. Retired rows are kept here precisely so the audit trail is
+   * reachable; every model-facing read path filters them out.
    * @returns all durable records.
    */
   all(): readonly DurableRow[] {
@@ -348,7 +350,10 @@ export class MemoryStore {
    */
   visible(filter: MemoryViewFilter): readonly DurableRow[] {
     return this.all().filter(row =>
-      !isSuppressedFor(row, filter.session_ref)
+      // Retired first and unconditionally: no filter may bring a corrected-away value back, because
+      // offering it again would re-ask a question the teacher already answered.
+      !isRetired(row)
+      && !isSuppressedFor(row, filter.session_ref)
       && (filter.include_expired === true || !isExpired(row, filter.nowIso)))
   }
 
@@ -381,11 +386,11 @@ export class MemoryStore {
     const rows = this.rowsFor(request.namespace, request.key)
       .filter(row => !isSuppressedFor(row, request.session_ref))
       .filter(row => request.scope === undefined || scopeKey(row.scope) === scopeKey(request.scope))
-    const live = rows.find(row => !isExpired(row, request.nowIso))
+    const live = rows.find(row => !isRetired(row) && !isExpired(row, request.nowIso))
     if (live !== undefined) {
       return { found: true, record: toRecordView(live) }
     }
-    const expired = rows.find(row => isExpired(row, request.nowIso))
+    const expired = rows.find(row => !isRetired(row) && isExpired(row, request.nowIso))
     if (expired === undefined || request.include_expired !== true) {
       return { found: false }
     }
@@ -400,7 +405,7 @@ export class MemoryStore {
   /**
    * Find memories relevant to a task (README §10.2). An empty query is not a
    * filter: it lists every record the session may see, which is what backs the
-   * control surface's 查看 AI 记住了什么 (README §13.1).
+   * control surface's 查看 AI 记住了什�?(README §13.1).
    * @param request - query, namespace/scope/confidence filters, and the view filter.
    * @returns the retained records and whether a limit cut the result.
    */
@@ -497,6 +502,10 @@ export class MemoryStore {
         : existing.confidence,
       updated_at: observedAt,
       expires_at: ttl.expiresAt,
+      // A restatement is a new belief about the same field, so it clears a retirement: without
+      // this, correcting a memory would poison the field forever, because the restated row would
+      // inherit `retired_at` from the row it replaces and stay invisible to every read path.
+      retired_at: null,
       last_confirmed_at: observedAt,
       evidence: input.evidence,
     }
@@ -542,6 +551,9 @@ export class MemoryStore {
       },
       updated_at: observedAt,
       expires_at: ttl.expiresAt,
+      // 修改 is the teacher restating the field, so it revives a retired row for the same reason a
+      // restatement does: the new value is a new belief, not an echo of the corrected-away one.
+      retired_at: null,
       last_confirmed_at: observedAt,
       evidence: input.evidence,
     }
@@ -585,13 +597,16 @@ export class MemoryStore {
    *
    * - `correct` updates the record's value at `explicit_correction` and records the
    *   corrected value as a durable correction.
-   * - `incorrect` records what was rejected and then deletes the contradicted row,
-   *   so the wrong value cannot be retrieved again while the correction remains.
+   * - `incorrect` records what was rejected and then RETIRES the contradicted row:
+   *   the wrong value leaves retrieval permanently while the audit record of what
+   *   was believed, and of the correction that withdrew it, survives. Retirement is
+   *   deliberately not `expires_at`, which withdraws a value that may still hold and
+   *   invites the teacher to re-confirm it.
    * - `outdated` withdraws the row by setting `expires_at` to now: retrieval hides
    *   it, and where the field's scope re-confirms, the teacher gets the field's
    *   re-confirmation prompt instead of a fresh question.
    * - `dont_use_this_time` sets `suppressed_for_session` and never touches the
-   *   value — the one-off stays a one-off (README §6.1).
+   *   value �?the one-off stays a one-off (README §6.1).
    * @param input - the target, the signal, and the required evidence.
    * @returns the action taken, the affected record, and whether a durable
    * correction was written.
@@ -617,8 +632,17 @@ export class MemoryStore {
     }
     if (input.signal === 'incorrect') {
       await this.recordCorrection(target, input.corrected_value, input.evidence, observedAt)
-      await this.tables.memories.delete(target.id)
-      return { action: 'invalidated', record: toRecordView(target), correction_recorded: true }
+      // Retire, do not delete. The wrong value must never be retrieved again, but the row is the
+      // only record that it was once believed and why it was withdrawn, and the corrections
+      // namespace depends on exactly that history.
+      const retired = {
+        ...target,
+        retired_at: observedAt,
+        updated_at: observedAt,
+        evidence: input.evidence,
+      }
+      await this.put(retired)
+      return { action: 'invalidated', record: toRecordView(retired), correction_recorded: true }
     }
     if (input.signal === 'outdated') {
       await this.put({ ...target, expires_at: observedAt, updated_at: observedAt, evidence: input.evidence })
@@ -732,7 +756,7 @@ export class MemoryStore {
    * Write the durable correction a feedback signal implies (README §13.5).
    *
    * The rejected value keeps the record's own spelling, so the next session can
-   * retrieve "不要用 PPT 讲整节课" rather than a paraphrase. A correction always
+   * retrieve "不要�?PPT 讲整节课" rather than a paraphrase. A correction always
    * carries `explicit_correction` at full confidence, because the teacher is the
    * one who said the stored value was wrong.
    */

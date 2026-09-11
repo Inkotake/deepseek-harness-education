@@ -22,6 +22,7 @@ import {
   MEMORY_TTL_POLICY,
   STANDING_PROFILE_MAX_CHARS,
   isExpired,
+  isRetired,
   reconfirmationFor,
   type MemoryConfidence,
   type MemoryRecord,
@@ -117,6 +118,10 @@ export interface RetrievalOutcome {
 
 /** Whether one row is visible to a session at an instant. */
 function isVisible(row: DurableRow, nowIso: string, sessionRef: string | undefined, includeExpired: boolean): boolean {
+  // Retired first and unconditionally. `includeExpired` may bring a possibly-stale value back as a
+  // candidate for re-confirmation, but a value the teacher corrected away was wrong, not stale, and
+  // offering it again would re-ask a question they already answered.
+  if (isRetired(row)) return false
   if (sessionRef !== undefined && row.suppressed_for_session === sessionRef) return false
   return includeExpired || !isExpired(row, nowIso)
 }
@@ -186,7 +191,7 @@ export function renderStandingProfile(rows: readonly DurableRow[], nowIso: strin
     const [namespace, key] = splitFieldName(fieldName)
     const row = rows
       .filter(candidate => candidate.namespace === namespace && candidate.key === key)
-      .filter(candidate => !isExpired(candidate, nowIso))
+      .filter(candidate => !isRetired(candidate) && !isExpired(candidate, nowIso))
       .sort((left, right) => right.updated_at.localeCompare(left.updated_at))[0]
     if (row === undefined) continue
     const label = STANDING_PROFILE_LABELS[fieldName] ?? key

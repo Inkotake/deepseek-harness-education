@@ -104,6 +104,17 @@ export const memoryRecordSchema = z.object({
   confidence: z.enum(CONFIDENCE_RUNGS),
   updated_at: z.string(),
   expires_at: z.string().nullable(),
+  /**
+   * When a correction retired this row.
+   *
+   * Retired rows leave retrieval permanently and are never re-confirmed: unlike
+   * `expires_at`, which withdraws a value that may still hold and asks the teacher to
+   * re-confirm it, a retirement means the value was wrong. The row survives so the
+   * correction keeps its audit trail. Optional so a row written before this field
+   * existed still parses — `storage-domain` rejects the entire open on one invalid
+   * record, so a required field here would strand every existing store.
+   */
+  retired_at: z.string().nullable().optional(),
   last_confirmed_at: z.string().optional(),
   user_pinned: z.boolean().optional(),
   suppressed_for_session: z.string().optional(),

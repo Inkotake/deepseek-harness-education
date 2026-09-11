@@ -23,6 +23,7 @@ import z from '@deepseek-ai/schemastery'
 import {
   MEMORY_DOMAIN,
   isExpired,
+  isRetired,
   reconfirmationFor,
   type MemoryId,
   type MemoryNamespace,
@@ -210,7 +211,9 @@ export class GlobalMemory extends Service {
     const nowIso = request.nowIso ?? store.now()
     const questionKey = questionKeyOf(request.namespace, request.key)
     const entry = store.ledgerEntry(questionKey)
-    const row = store.rowsFor(request.namespace, request.key)[0]
+    // A retired row is not a known value: treating it as one would tell the checklist the field is
+    // settled and suppress the question, which is the opposite of what a correction should do.
+    const row = store.rowsFor(request.namespace, request.key).find(candidate => !isRetired(candidate))
     const memory = row === undefined
       ? undefined
       : { record: row, expired: isExpired(row, nowIso) }

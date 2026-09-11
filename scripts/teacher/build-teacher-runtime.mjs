@@ -29,6 +29,18 @@ const DOWNLOADS = path.join(ROOT, 'build', 'downloads')
 const TEACHER = path.join(ROOT, 'teacher')
 
 const NODE_VERSION = '22.23.2'
+/**
+ * MinGit: the official git-for-windows build intended for embedding.
+ *
+ * The distribution ships git because a teacher's machine cannot be assumed to have anything
+ * installed, and the education preset instructs the agent to put a working directory under version
+ * control before changing it. Git is GPLv2, so the license text travels with it and the notices
+ * entry records the obligation.
+ */
+const GIT_VERSION = '2.55.0.5'
+const GIT_RELEASE_TAG = 'v2.55.0.windows.5'
+const MINGIT_URL = 'https://github.com/git-for-windows/git/releases/download'
+  + `/${GIT_RELEASE_TAG}/MinGit-${GIT_VERSION}-64-bit.zip`
 const PNPM_VERSION = '11.8.0'
 
 /** Pinned artifact toolchain versions. Keep in sync with teacher/manifests/toolchain.lock.json. */
@@ -630,6 +642,47 @@ function stepNode() {
   reportSize('node', nodeDir)
 }
 
+/**
+ * Stage the embedded git, which the education preset's version-control instruction depends on.
+ *
+ * Mirrors `stepNode`: stamp-guarded, cached archive, extract, copy the tree that actually carries
+ * `cmd/`, then run the binary once so a broken payload fails the build rather than shipping.
+ */
+function stepGit() {
+  const gitDir = path.join(TEACHER_RUNTIME, 'git')
+  const stamp = path.join(gitDir, 'VERSION')
+  if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8').trim() === GIT_VERSION) {
+    log(`git: already staged at ${GIT_VERSION}`)
+    return
+  }
+  emptyDir(gitDir)
+  ensureDir(DOWNLOADS)
+  const archive = path.join(DOWNLOADS, `MinGit-${GIT_VERSION}-64-bit.zip`)
+  if (!fs.existsSync(archive)) {
+    run('curl.exe', ['-L', '--fail', '--retry', '3', '-o', archive, MINGIT_URL])
+  }
+  const extractRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tdsh-git-'))
+  try {
+    run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+      `Expand-Archive -LiteralPath '${archive}' -DestinationPath '${extractRoot}' -Force`])
+    // MinGit unpacks `cmd/` and `mingw64/` at the archive root; tolerate a single wrapping directory
+    // so an upstream packaging change degrades to a wrong path rather than a silent empty tree.
+    const source = fs.existsSync(path.join(extractRoot, 'cmd'))
+      ? extractRoot
+      : fs.readdirSync(extractRoot, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => path.join(extractRoot, entry.name))
+        .find(candidate => fs.existsSync(path.join(candidate, 'cmd')))
+    if (source === undefined) throw new Error('MinGit archive has no cmd/ directory')
+    fs.cpSync(source, gitDir, { recursive: true })
+  } finally {
+    fs.rmSync(extractRoot, { recursive: true, force: true })
+  }
+  fs.writeFileSync(stamp, `${GIT_VERSION}\n`)
+  run(path.join(gitDir, 'cmd', 'git.exe'), ['--version'])
+  reportSize('git', gitDir)
+}
+
 function stepPnpm() {
   const pnpmDir = path.join(DSH_RUNTIME, 'pnpm')
   const source = path.join(ROOT, 'dsh-plugin-desktop', 'node_modules', 'pnpm')
@@ -957,6 +1010,7 @@ function stepBin() {
 
 const STEPS = [
   ['node', stepNode],
+  ['git', stepGit],
   ['pnpm', stepPnpm],
   ['dsh', stepDsh],
   ['cli', stepCli],

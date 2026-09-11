@@ -39,6 +39,7 @@ export const TEACHER_ENVIRONMENT_KEYS = [
   'TEACHER_SKILLS_HOME',
   'TEACHER_DEPLOY_HOME',
   'TEACHER_PPT_HOME',
+  'TEACHER_GIT_HOME',
   'TEACHER_RUNTIME_ROOT',
   'TEACHER_NODE',
   'TEACHER_DSH_TEMPLATES',
@@ -350,6 +351,7 @@ export function installTeacherRuntime(options: TeacherRuntimeOptions): TeacherRu
     TEACHER_SKILLS_HOME: join(runtimeRoot, 'skills'),
     TEACHER_DEPLOY_HOME: join(runtimeRoot, 'deploy'),
     TEACHER_PPT_HOME: join(runtimeRoot, 'ppt'),
+    TEACHER_GIT_HOME: join(runtimeRoot, 'git'),
     TEACHER_RUNTIME_ROOT: runtimeRoot,
     TEACHER_NODE: nodeExecutable,
     // The Harness filesystem skill provider scans this root with bundled-skill rank, which is
@@ -365,6 +367,10 @@ export function installTeacherRuntime(options: TeacherRuntimeOptions): TeacherRu
 
   const releaseBin = installPathDirectory(environment, pathDir)
   const releaseNode = installPathDirectory(environment, join(dshRuntimeRoot, 'node'))
+  // Embedded git, so the education preset's version-control instruction works on a machine that has
+  // nothing installed. MinGit publishes `cmd/git.exe`, and that directory is what belongs on PATH.
+  const gitBin = join(runtimeRoot, 'git', 'cmd')
+  const releaseGit = existsSync(gitBin) ? installPathDirectory(environment, gitBin) : () => {}
   // Deploy CLIs resolve from the bundled tree; no global npm install is ever required.
   const deployBin = join(runtimeRoot, 'deploy', 'node_modules', '.bin')
   const releaseDeploy = existsSync(deployBin) ? installPathDirectory(environment, deployBin) : () => {}
@@ -380,6 +386,7 @@ export function installTeacherRuntime(options: TeacherRuntimeOptions): TeacherRu
       if (!active) return
       active = false
       releaseDeploy()
+      releaseGit()
       releaseNode()
       releaseBin()
       for (const key of TEACHER_ENVIRONMENT_KEYS) delete environment[key]

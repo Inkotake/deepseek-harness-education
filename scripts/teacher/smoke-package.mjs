@@ -144,13 +144,18 @@ function main() {
       .filter(entry => entry.isDirectory() && fs.existsSync(path.join(skillsRoot, entry.name, 'SKILL.md')))
       .map(entry => entry.name)
       .sort()
-    const required = ['teaching-aid', 'publish-static', 'latex-authoring']
+    const required = ['teaching-aid', 'publish-static', 'latex-authoring', 'teacher-grabme']
     const missing = required.filter(name => !skills.includes(name))
     record('bundled-skills', missing.length === 0, `${skills.length} skills: ${skills.join(', ')}`)
     if (missing.length > 0) record('bundled-skills-required', false, `missing: ${missing.join(', ')}`)
   } else {
     record('bundled-skills', false, `missing: ${skillsRoot}`)
   }
+
+  // The education preset tells the agent to put a working directory under version control before
+  // changing it, and a teacher's machine cannot be assumed to have anything installed. The packaged
+  // runtime must therefore carry git rather than rely on the host.
+  assertPath('bundled-git', path.join(teacherRuntime, 'git', 'cmd', 'git.exe'))
 
   const seedManifest = path.join(teacherRuntime, 'seed', 'dsh-home', 'TEACHER-SEED.json')
   if (assertPath('profile-seed', seedManifest)) {

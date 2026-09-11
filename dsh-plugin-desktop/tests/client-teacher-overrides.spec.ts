@@ -11,9 +11,10 @@ import {
 } from '../src/client/risk-dialog-styles.ts'
 import {
   applyFullAccessWarningCopy,
+  CONVERSATION_NAMESPACE,
   FULL_ACCESS_RISK_ITEM_COUNT,
   FULL_ACCESS_WARNING_COPY,
-  FULL_ACCESS_WARNING_KEY,
+  FULL_ACCESS_WARNING_TARGETS,
   PERMISSION_ACCESS_NAMESPACE,
   SETTINGS_PERMISSION_NAMESPACE,
 } from '../src/client/teacher-copy-overrides.ts'
@@ -25,7 +26,14 @@ import {
   WELCOME_NOTICE_SUPPRESSION_PRIORITY,
 } from '../src/client/welcome-notice-suppression.ts'
 
-const NAMESPACES = [SETTINGS_PERMISSION_NAMESPACE, PERMISSION_ACCESS_NAMESPACE] as const
+const NAMESPACES = [
+  SETTINGS_PERMISSION_NAMESPACE,
+  PERMISSION_ACCESS_NAMESPACE,
+  CONVERSATION_NAMESPACE,
+] as const
+
+/** The key each namespace's own package renders, which differs for the composer's selector. */
+const warningKey = (namespace: string): string => FULL_ACCESS_WARNING_TARGETS[namespace] ?? ''
 
 const REQUIRED_TOPICS_ZH = [
   '操作系统账户权限',
@@ -124,24 +132,29 @@ describe('vendored translation override', () => {
     applyFullAccessWarningCopy(ctx)
     expect(labels).toEqual(['dsh-plugin-desktop: expanded Full access warning copy'])
 
-    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, FULL_ACCESS_WARNING_KEY))
+    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, warningKey(SETTINGS_PERMISSION_NAMESPACE)))
       .toBe(FULL_ACCESS_WARNING_COPY[SETTINGS_PERMISSION_NAMESPACE]?.zh)
-    expect(runtime.translate(PERMISSION_ACCESS_NAMESPACE, FULL_ACCESS_WARNING_KEY))
+    expect(runtime.translate(PERMISSION_ACCESS_NAMESPACE, warningKey(PERMISSION_ACCESS_NAMESPACE)))
       .toBe(FULL_ACCESS_WARNING_COPY[PERMISSION_ACCESS_NAMESPACE]?.zh)
+    // The composer's selector lives in the conversation namespace under a different key; covering
+    // only the two permission namespaces is what left it showing the vendored one-liner.
+    expect(runtime.translate(CONVERSATION_NAMESPACE, warningKey(CONVERSATION_NAMESPACE)))
+      .toBe(FULL_ACCESS_WARNING_COPY[CONVERSATION_NAMESPACE]?.zh)
     runtime.active = 'en'
-    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, FULL_ACCESS_WARNING_KEY))
+    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, warningKey(SETTINGS_PERMISSION_NAMESPACE)))
       .toBe(FULL_ACCESS_WARNING_COPY[SETTINGS_PERMISSION_NAMESPACE]?.en)
 
     expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, 'title')).toBe(`vendored:${SETTINGS_PERMISSION_NAMESPACE}/title`)
-    expect(runtime.translate('settings.models', FULL_ACCESS_WARNING_KEY)).toBe(`vendored:settings.models/${FULL_ACCESS_WARNING_KEY}`)
+    expect(runtime.translate('settings.models', warningKey(SETTINGS_PERMISSION_NAMESPACE)))
+      .toBe(`vendored:settings.models/${warningKey(SETTINGS_PERMISSION_NAMESPACE)}`)
     expect(runtime.calls).toEqual([
       `${SETTINGS_PERMISSION_NAMESPACE}/title`,
-      `settings.models/${FULL_ACCESS_WARNING_KEY}`,
+      `settings.models/${warningKey(SETTINGS_PERMISSION_NAMESPACE)}`,
     ])
 
     for (const dispose of disposers) dispose()
-    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, FULL_ACCESS_WARNING_KEY))
-      .toBe(`vendored:${SETTINGS_PERMISSION_NAMESPACE}/${FULL_ACCESS_WARNING_KEY}`)
+    expect(runtime.translate(SETTINGS_PERMISSION_NAMESPACE, warningKey(SETTINGS_PERMISSION_NAMESPACE)))
+      .toBe(`vendored:${SETTINGS_PERMISSION_NAMESPACE}/${warningKey(SETTINGS_PERMISSION_NAMESPACE)}`)
   })
 
   it('keeps the vendored method as the receiver of every delegated call', () => {

@@ -82,6 +82,8 @@ const OBSOLETE_DESKTOP_BUNDLE_SET = new Set(['@deepseek-ai/dsh-desktop-app'])
 const INSTALL_ANCHOR = unpackedAsarPath(fileURLToPath(new URL('../package.json', import.meta.url)))
 const DESKTOP_PATCH_PATH = fileURLToPath(new URL('../cordis.patch.yml', import.meta.url))
 const PWSH_SANDBOX_ROW_ID = 'pwsh-sandbox'
+/** Alternate agent-activity view; an operator tool the Advanced toggle gates. */
+const TRAJECTORY_ROW_ID = 'ui-trajectory'
 const DIRECTORY_PICKER_ROW_ID = 'directory-picker'
 const AUTO_PICKER_PACKAGE = '@deepseek-ai/dsh-host-directory-picker-auto'
 const BROWSE_PICKER_BACKEND = '@deepseek-ai/dsh-host-directory-picker-browse'
@@ -1013,6 +1015,13 @@ export function prepareDesktopProfile(
       ? { ...rowConfig(presets), roots: [{ path: shippedPresetRoot(), trust: 'system' }] }
       : { ...rowConfig(presets), includeShippedRoot: false, roots }
     patches.push({ id: AGENT_PRESETS_ROW_ID, config })
+  }
+  // The trajectory view presents request-level provenance for an operator. The Advanced toggle's own
+  // copy has always promised this menu only in that mode, and it was never actually gated. Disabling
+  // the row is safe here in a way it was not for `ui-layout`: this package consumes services and
+  // registers one view, so nothing else resolves through it.
+  if (mode !== 'advanced' && rows.get(TRAJECTORY_ROW_ID) !== undefined) {
+    patches.push({ id: TRAJECTORY_ROW_ID, disabled: true })
   }
   const webserver = rows.get('webserver')
   if (webserver === undefined) {

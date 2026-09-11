@@ -345,7 +345,7 @@ macOS / Linux 的打包没有产出（`electron-builder` 的 mac/linux target �
 - `teacher/pnpm-workspace.yaml` 会被 pnpm 自动追加 `minimumReleaseAgeExclude`（mermaid / @mermaid-js/parser）。
   可以保留，但注意别让它在干净机器上触发 policy 报错。
 - corepack 首次下载 yarn 会交互，脚本里统一设 `COREPACK_ENABLE_DOWNLOAD_PROMPT=0`。
-- 本机 `~/.gitconfig` 配了 `http.proxy=http://127.0.0.1:10808` 且该代理经常不可用；clone GitHub 用
+- 若本机 `~/.gitconfig` 配了 HTTP 代理且该代理不可用，clone GitHub 会挂；临时绕过用
   `git -c http.proxy= -c https.proxy= clone ...`，`scripts/teacher/vendor-*.mjs` 已内置该 override。
 - 旧仓库工作区里的 `git-commit.log`、`legacy.tar` 可以直接删。
 

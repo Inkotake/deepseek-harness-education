@@ -897,13 +897,24 @@ function stepPlugins() {
   emptyDir(pluginsRoot)
   const lock = readJson(path.join(TEACHER, 'manifests', 'plugins.lock.json'))
   writeJson(path.join(pluginsRoot, 'plugins.lock.json'), lock)
+  // Ship provenance, not the whole vendored checkout. The full source trees live in the
+  // repository under resources/teacher-seed/plugins; copying them into the installer added
+  // 5.5 MB of upstream test fixtures - including deliberate fake credentials
+  // (AKIAIOSFODNN7EXAMPLE, ghp_abcdefghijklmnopqrst, a dummy private key) that make virus and
+  // secret scanners flag a signed installer for no reason.
+  const PROVENANCE = ['SOURCE.json', 'package.json', 'LICENSE', 'LICENSE.md', 'LICENSE.txt', 'COPYING']
   for (const entry of lock.core ?? []) {
     const source = path.join(RESOURCES, 'teacher-seed', 'plugins', entry.id)
     if (!fs.existsSync(source)) {
       warn(`plugin source missing: ${entry.id}`)
       continue
     }
-    copyDir(source, path.join(pluginsRoot, 'sources', entry.id))
+    const target = path.join(pluginsRoot, 'sources', entry.id)
+    ensureDir(target)
+    for (const name of PROVENANCE) {
+      const from = path.join(source, name)
+      if (fs.existsSync(from)) fs.copyFileSync(from, path.join(target, name))
+    }
   }
   reportSize('plugins', pluginsRoot)
 }

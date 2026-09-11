@@ -1,0 +1,558 @@
+[
+  {
+    "id": "vague-atmosphere-memory-covered",
+    "category": "vague_request",
+    "teacher_message": "帮我设计一节大气受热过程",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理", "role": "高中地理教师" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45, "academic_year": "2025-2026" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["教学侧重"],
+      "must_not_ask_about": ["年级", "教材版本", "课时长度", "学科", "课题"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "计划一/四(P0-2)的原例：记忆里已经有高中地理/高一/人教版/45min。教学侧重必须以可认出的几个方向出现（例如重讲授推理 / 重观察实验 / 重生活应用），不能问“您希望什么教学侧重”。"
+    },
+    "why": "保护“已经知道的信息不许再问”这条底线，同时验证追问是“认出来”而不是“凭空描述”。"
+  },
+  {
+    "id": "missing-midterm-paper-two-questions",
+    "category": "missing_key_parameter",
+    "teacher_message": "我要做一份期中试卷",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": {},
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["年级与学科", "考试范围"],
+      "must_not_ask_about": ["分值", "难度梯度", "题型比例", "试卷结构", "考试时长", "题量"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "计划一的原例。真正缺的只有“哪个年级哪一科”和“考到哪里”。分值/难度梯度/题型比例必须按 defaults 直接给默认值并说明，不许问。第一轮提问数硬上限为 2。"
+    },
+    "why": "防止把可安全默认的配置项变成问卷，把两张卷子做成一问一答的十轮访谈。"
+  },
+  {
+    "id": "novelty-population-migration",
+    "category": "novelty_request",
+    "teacher_message": "我要讲人口迁移，有什么新颖点的吗？",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["新颖的形式", "您希望什么形式", "什么算新颖", "请描述你想要的创新点"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "计划七的原例。必须给出 2-3 个可认出的方向并推荐一个：真实案例型（就近几年的迁移新闻做案例）/ 角色决策型（学生扮演迁移决策者）/ 数据推理型（给出迁移数据让学生推结论）。禁止反问“您希望什么形式的新颖”。"
+    },
+    "why": "这是本层存在的理由：老师问“新颖点”时自己也不知道选项，把球踢回去等于什么都没做。"
+  },
+  {
+    "id": "do-not-know-you-choose",
+    "category": "vague_request",
+    "teacher_message": "不知道，你帮我选",
+    "preloaded_memory": {
+      "profile": { "subject": "初中物理", "role": "初中物理教师" },
+      "environment": { "grade": "八年级", "textbook": "人教版", "lesson_minutes": 40 },
+      "preferences": { "class_style": "学生基础一般，需要多演示" },
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["教学侧重", "课堂形式", "您想要哪种", "请再选一个"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "计划四(P0-2)的 allow_skip：“不知道，你帮我选”是正常路径，不是兜底。助手必须自己定下选择并复述将要做什么，不能再来一轮“那您想要 A 还是 B”。"
+    },
+    "why": "暴露把用户的“你决定”当成信息不足反复追问的失败模式。"
+  },
+  {
+    "id": "correction-lesson-objectives-cap",
+    "category": "correction_followup",
+    "teacher_message": "再帮我写一节《热力环流》的教案，还是老规矩",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": {},
+      "corrections": [
+        {
+          "text": "教学目标优先控制在 2-3 项",
+          "scope": "corrections.lesson_design",
+          "source": "explicit_correction",
+          "confidence": 1.0,
+          "updated_at": "2025-09-18"
+        }
+      ]
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["教学目标写几项", "教学目标数量", "您希望几个目标", "课时长度", "教材版本", "年级"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "已记录的纠正必须在不再提问的前提下被遵守：教案里的教学目标直接写 2-3 项。Question Ledger 里有答案的问题一律不再问。"
+    },
+    "why": "计划一“用户纠正过一次的问题，不应再发生第二次”的最小可测形式。"
+  },
+  {
+    "id": "direct-execution-immediate",
+    "category": "direct_execution",
+    "teacher_message": "直接做，别问了",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高二", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["年级", "教材版本", "课时长度", "教学侧重", "课堂形式", "交付形式"],
+      "max_questions_first_turn": 0,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "计划四(P0-1)的关键条款：用户说“直接做”→立即停止需求访谈。这里第一轮提问数必须为 0；不确定的参数改为“边做边说明假设”，不能变成问题。"
+    },
+    "why": "这是整个 suite 里最强的反审讯断言：访谈必须能被用户一句话终止。"
+  },
+  {
+    "id": "ambiguous-one-week-of-geography",
+    "category": "ambiguous_scope",
+    "teacher_message": "下周的几节地理课，你帮我准备一下",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lessons_per_week": 3 },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["下周几节课与进度起点"],
+      "must_not_ask_about": ["学科", "年级", "教材版本", "每周几节", "要准备什么形式的材料"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "“几节课”是真的无法安全默认的关键参数（范围本身模糊），可以问一次并且必须给出选项（例如“就从下周一开始的连续 3 节”/“只准备第 1 节”）。同时必须给出默认假设并开始产出，不能停在提问。"
+    },
+    "why": "区分“范围模糊”和“信息不足”：前者允许一次带选项的追问，后者允许边做边说假设。"
+  },
+  {
+    "id": "direct-ppt-from-slides",
+    "category": "direct_execution",
+    "teacher_message": "把这份课件改成更清爽的样式，直接改",
+    "preloaded_memory": {
+      "profile": { "subject": "高中生物" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": { "ppt_style": "字少、图大" },
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["清爽指什么", "您希望什么风格", "字号", "配色", "年级", "教材版本"],
+      "max_questions_first_turn": 0,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "“直接改”= allow_direct_execution。即便“清爽”是模糊词，也应该按记忆里的偏好（字少、图大）先做一版再让老师纠正，而不是先问风格。"
+    },
+    "why": "防止把风格形容词当成必须澄清的槽位，把改样式变成风格问卷。"
+  },
+  {
+    "id": "novelty-make-lesson-interesting",
+    "category": "novelty_request",
+    "teacher_message": "上次那节大气受热过程，学生好像没听懂，怎么能上得有意思点？",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["有意思指什么", "您希望什么形式", "什么是没听懂"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "与 novelty-population-migration 同型：必须给 2-3 个可认出的改法（例如加一个可动手的观察/实验、换成学生身边的气温体验、用一条完整的数据链带出结论）并推荐一个，而不是让老师解释“有意思”的标准。"
+    },
+    "why": "新颖性问题的第二个样本，防止只在一条用例上碰巧通过。"
+  },
+  {
+    "id": "out-of-scope-summer-reading-quiz",
+    "category": "out_of_scope",
+    "teacher_message": "帮我给全班学生每人出一份暑假阅读的书单，还要能自动批改他们的读书笔记",
+    "preloaded_memory": {
+      "profile": { "subject": "高中语文" },
+      "environment": { "grade": "高一" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["书单主题", "阅读难度", "批改标准", "学生的阅读水平"],
+      "max_questions_first_turn": 1,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "唯一站得住的下一步是说明边界：本层做需求发现与教学材料生成，没有学生账号与提交入口，因此无法自动收取并批改读书笔记。可以说清楚能做的部分（书单 + 可打印的笔记模板/自评表）并让老师选，但不能靠追问把不可能的任务问成可能的。"
+    },
+    "why": "防止助手在能力之外用更多提问来拖延，把“做不到”伪装成“信息还不够”。"
+  },
+  {
+    "id": "out-of-scope-real-time-rankings",
+    "category": "out_of_scope",
+    "teacher_message": "帮我把今年我们市所有高中今年的高考录取率实时排名抓下来",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": {},
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["哪个市", "哪些学校", "排名维度", "数据口径"],
+      "max_questions_first_turn": 1,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "“实时”的市级录取率排名不是本层能提供的（无数据源、涉及未公开数据）。应当直接说明并提供替代（例如用公开的统计年鉴数据做课堂分析任务），而不是先问“哪个市”再发现做不了。"
+    },
+    "why": "第二个越界样本：必须在不追问的情况下先判定范围，避免用澄清问题掩盖能力边界。"
+  },
+  {
+    "id": "missing-homework-two-questions",
+    "category": "missing_key_parameter",
+    "teacher_message": "帮我出点课后练习",
+    "preloaded_memory": {
+      "profile": {},
+      "environment": {},
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["年级与学科", "对应章节"],
+      "must_not_ask_about": ["题量", "难度", "题型", "是否附答案", "完成时间"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "记忆为空时的等价用例：仍然最多两个问题，题量/难度/题型/答案按默认值直接给并说明，不给老师布置填空题。"
+    },
+    "why": "证明“最多两个问题”是策略而不是巧合，在记忆为空时同样成立。"
+  },
+  {
+    "id": "missing-ppt-two-questions",
+    "category": "missing_key_parameter",
+    "teacher_message": "帮我做个课件",
+    "preloaded_memory": {
+      "profile": {},
+      "environment": {},
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["年级与学科", "课题"],
+      "must_not_ask_about": ["页数", "模板风格", "配色", "字号", "是否放动画", "有没有图片素材"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "“做个课件”是最典型的模糊开场。页数/模板/配色都属可安全默认项，必须默认而不是问；只有“哪个年级哪一科、讲哪一课”会真正改变结果。"
+    },
+    "why": "第三类交付物的同一断言，避免 suite 只保护教案和试卷两条路径。"
+  },
+  {
+    "id": "missing-exam-two-questions",
+    "category": "missing_key_parameter",
+    "teacher_message": "要月考了，帮我弄套卷子",
+    "preloaded_memory": {
+      "profile": { "subject": "初中化学" },
+      "environment": {},
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["年级", "考试范围"],
+      "must_not_ask_about": ["分值", "难度梯度", "题型比例", "考试时长", "要不要答题卡"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "学科已从 profile 推断出来，不该再问学科。剩下两个问题：哪个年级、考到哪里。分值等结构性参数直接给默认并说明。"
+    },
+    "why": "确认“能推断的不要问”在试卷类任务上同样被遵守，而不只是地理。"
+  },
+  {
+    "id": "scope-unclear-across-the-semester",
+    "category": "ambiguous_scope",
+    "teacher_message": "帮我把这学期地理要用的材料都准备一下",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": ["先做哪一部分"],
+      "must_not_ask_about": ["学科", "年级", "教材版本", "要准备哪些类型的材料", "每节课都要吗"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "范围大到不可能一轮做完，正确做法是把范围切成可选的几块并推荐从哪里开始（例如先做第一章的课件与练习），而不是列出十项材料清单让老师勾选。"
+    },
+    "why": "范围过大时最容易退化成配置页；这里断言必须给可执行的切分方案和默认起点。"
+  },
+  {
+    "id": "scope-unclear-whole-unit",
+    "category": "ambiguous_scope",
+    "teacher_message": "第三单元我整体讲不太好，你帮我梳理一下",
+    "preloaded_memory": {
+      "profile": { "subject": "初中生物" },
+      "environment": { "grade": "八年级", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["哪个单元", "哪个年级", "哪本教材", "要梳理成什么形式"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "年级与教材都有，单元号本身在话里。应该先按单元知识结构给一版梳理（并允许老师纠正单元号），而不是先确认“哪个单元”。形式给选项：时间线式梳理 / 概念关系图 / 逐节要点。"
+    },
+    "why": "防止把话里已有的信息当成缺失参数，重复确认最熟悉的东西。"
+  },
+  {
+    "id": "choices-required-activity-or-not",
+    "category": "vague_request",
+    "teacher_message": "我想加个课堂活动，你有什么想法？",
+    "preloaded_memory": {
+      "profile": { "subject": "初中物理" },
+      "environment": { "grade": "八年级", "classroom": "有投影，无实验器材补充" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["您想要什么类型的活动", "活动的目标是什么", "希望多长时间", "活动形式"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "本用例专门锁定 must_offer_choices=true 与 must_not_ask_about 中的开放式提问同时成立：必须给出 2-3 个具体活动（含器材与时长）并推荐一个，禁止出现“您想要什么类型的活动”这类开放式问句。"
+    },
+    "why": "“给方向，不给问卷”这条规则最容易在“活动/点子”类请求上被违反，需要一条独立断言。"
+  },
+  {
+    "id": "choices-required-review-lesson",
+    "category": "vague_request",
+    "teacher_message": "快考试了，想上一节复习课",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高二", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["复习范围", "复习形式", "您希望怎么复习", "要不要做题"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "复习课的形式是典型的“老师有偏好但说不出来”，必须以可认出的方向出现（按考点串讲 / 典型错题回炉 / 学生自主画结构图）并推荐一个。"
+    },
+    "why": "第二个 must_offer_choices 用例，且 must_not_ask_about 明确封死开放式问句。"
+  },
+  {
+    "id": "correction-time-control",
+    "category": "correction_followup",
+    "teacher_message": "这个教案环节太多了，45 分钟根本讲不完，改一下",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": {},
+      "corrections": [
+        {
+          "text": "环节总数不超过 3 个，必须留 5 分钟当堂练习",
+          "scope": "corrections.lesson_design",
+          "source": "explicit_correction",
+          "confidence": 1.0,
+          "updated_at": "2025-10-09"
+        }
+      ]
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["课时长度", "要删掉哪个环节", "希望保留几个环节", "有没有当堂练习"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "纠正已经记下（环节 ≤ 3、留 5 分钟练习），本次必须直接按它改，不许再问“希望保留几个环节”。改完给一句可纠正的复述即可。"
+    },
+    "why": "纠正类问题的第二个样本，验证纠正作为长期约束被静默兑现，而不是被重新询问。"
+  },
+  {
+    "id": "correction-answer-key-with-paper",
+    "category": "correction_followup",
+    "teacher_message": "再出两套小测，跟上次一样",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一" },
+      "preferences": {},
+      "corrections": [
+        {
+          "text": "答案要跟题目分开，单独一页，不要夹在题目后面",
+          "scope": "corrections.assessment",
+          "source": "explicit_correction",
+          "confidence": 1.0,
+          "updated_at": "2025-09-30"
+        }
+      ]
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["答案放哪里", "要不要附答案", "题目和答案是否分开", "年级", "学科"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "“跟上次一样”就是把已记录的纠正当作默认：答案单独一页。禁止再确认“要不要附答案”“答案放哪里”。"
+    },
+    "why": "第三个纠正样本，覆盖非教案类纠正，确认纠正不只在一个槽位上生效。"
+  },
+  {
+    "id": "memory-not-longterm-no-activity-once",
+    "category": "memory_should_answer",
+    "teacher_message": "这次不要课堂活动，就我自己讲。",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["是不是一直不喜欢课堂活动", "以后都不要课堂活动吗", "要不要存成长期偏好"],
+      "max_questions_first_turn": 1,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "计划四(P0-3)的硬约束：一次性说法不得沉淀为长期记忆。本次遵守“不要课堂活动”，但不得据此提问或写入 preferences。是否记录由显式意图决定，不由这一句推断。"
+    },
+    "why": "防止把“这次不要”误读成“用户不喜欢”，这是错误记忆最常见的入口。"
+  },
+  {
+    "id": "memory-not-longterm-this-class-only",
+    "category": "memory_should_answer",
+    "teacher_message": "这个班基础差，今天讲慢一点，多留点时间做练习",
+    "preloaded_memory": {
+      "profile": { "subject": "初中数学" },
+      "environment": { "grade": "七年级", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["是不是所有班都讲慢一点", "要不要记住这个班的进度", "这个班以后都这样吗"],
+      "max_questions_first_turn": 1,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "“这个班基础差、今天讲慢一点”是班级当场情况（scope 更像 environment/projects 且带时效），不得变成长期用户画像；本轮的调整直接生效即可，不需要就此提问。"
+    },
+    "why": "第二个“不得长期化”的样本：防止把某一班的一次情况写成教师的普遍偏好。"
+  },
+  {
+    "id": "memory-not-longterm-no-calculation",
+    "category": "memory_should_answer",
+    "teacher_message": "今天这份练习不要计算题，我想看看他们概念清不清楚",
+    "preloaded_memory": {
+      "profile": { "subject": "高中物理" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["是不是以后都不要计算题", "要不要记住这个偏好", "要不要把计算题换成别的题型"],
+      "max_questions_first_turn": 1,
+      "must_offer_choices": false,
+      "must_produce_brief": true,
+      "notes": "“今天这份”明确限定了范围。练习直接不给计算题；不得据此推断长期偏好，也不得就“以后要不要”提问。"
+    },
+    "why": "第三个“不得长期化”的样本，用明确的范围词（今天这份）作为判据。"
+  },
+  {
+    "id": "memory-class-differences",
+    "category": "memory_should_answer",
+    "teacher_message": "给 3 班准备的这节课，跟上次 1 班那个不一样啊",
+    "preloaded_memory": {
+      "profile": { "subject": "高中化学" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": [],
+      "projects": {
+        "class_1": "基础好，可以直接上难度",
+        "class_3": "基础一般，需要先补前置知识"
+      }
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["3 班和 1 班有什么不同", "3 班基础怎么样", "要不要区别对待"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "记忆里已有两个班的差异，必须直接按 3 班的基础调整（先补前置知识、降低起点），而不是再问班级差异。差异的依据（哪个班讲到哪）可以列为 assumption 让老师纠正。"
+    },
+    "why": "验证“召回优于回忆”：同一课题不同班级，记忆必须改变产出而不是变成新问题。"
+  },
+  {
+    "id": "memory-avoid-textbook-example",
+    "category": "memory_should_answer",
+    "teacher_message": "这节课别用教材上那个例子了，学生已经自己看过了",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版" },
+      "preferences": {},
+      "corrections": [
+        {
+          "text": "人教版必修一里已经出现过的案例不要重复用",
+          "scope": "corrections.material_choice",
+          "source": "explicit_correction",
+          "confidence": 1.0,
+          "updated_at": "2025-09-22"
+        }
+      ]
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["用哪个例子代替", "你想换成什么案例", "教材上哪个例子"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "记忆里已有同类纠正。正确做法是直接换成另一条可用案例，并以 2-3 个候选案例（给方向，不给填空）让老师确认，而不是问“你想换成什么”。"
+    },
+    "why": "同时检验记忆生效与“给选项不给开放问题”的组合情形。"
+  },
+  {
+    "id": "memory-activity-mix-novelty",
+    "category": "novelty_request",
+    "teacher_message": "这节人口迁移的课，怎么让学生真的动起来？",
+    "preloaded_memory": {
+      "profile": { "subject": "高中地理" },
+      "environment": { "grade": "高一", "textbook": "人教版", "lesson_minutes": 45 },
+      "preferences": { "activity_preference": "学生愿意上台，但不喜欢写长作业" },
+      "corrections": []
+    },
+    "expected": {
+      "must_ask_about": [],
+      "must_not_ask_about": ["你希望什么形式的活动", "活动目标是什么", "多长时间", "要不要分组"],
+      "max_questions_first_turn": 2,
+      "must_offer_choices": true,
+      "must_produce_brief": true,
+      "notes": "结合记忆里的偏好（愿意上台、不想写长作业）给出 2-3 个可认出的做法（例如角色决策 + 上台陈述、地图上做迁移路线推演、数据推理后口头汇报），并推荐一个，同时说明适配 45 分钟。"
+    },
+    "why": "第三个新颖性样本，且要求记忆参与选方向，避免“新颖点”被答成通用点子清单。"
+  }
+]

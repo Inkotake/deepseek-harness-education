@@ -587,11 +587,47 @@ documents that a service row in an agent preset must sit inside a group carrying
 realm, or it publishes process-global and collides; and that a realm-per-preset instance would
 give each preset its own memory, which is exactly what this design must avoid.
 
-Consequence for whoever integrates this: mount the service on the **host plane** (alongside the
-other registries the preset file explicitly says stay there — `tools`, `skills`, `sessions`,
-`subagents`, `sessionProjections`; see `agent.cordis.yml:83-84`, `:107-108`, `:188-192`), and have
-presets contribute only reachability of the six tools plus `memory_policy` prose. The exact host
-composition file is **not** identified here — see §15.
+Consequence for whoever integrates this: mount the service on the **host plane**, and have presets
+contribute only reachability of the six tools plus `memory_policy` prose.
+
+The host plane for the desktop product is the base bundle patch,
+`deepseek-harness/packages/bundle/base/cordis.patch.yml`. That file already mounts exactly the
+stack this service sits on:
+
+```yaml
+# deepseek-harness/packages/bundle/base/cordis.patch.yml:141-156
+    # Durable KV storage: the storage hub, the json backend, and the
+    # schema-validated domain form over them. Session-layer persistence (the
+    # projection cache below; workspace in web layers)
+    # routes through this stack, so it belongs to the shared base.
+    - id: storage
+      name: '@deepseek-ai/dsh-storage'
+
+    - id: storage-json
+      name: '@deepseek-ai/dsh-storage-json'
+      config:
+        root: !!js dshHomePath('storages')
+
+    - id: storage-domain
+      name: '@deepseek-ai/dsh-storage-domain'
+      config:
+        backend: json
+```
+
+`tools` and `system-prompt` are host rows in the same patch
+(`base/cordis.patch.yml:460-466`), and the web layer patches `tools` the same way
+(`bundle/web-app/cordis.patch.yml:32`). So one `- insert:` row for `@deepseek-ai/dsh-global-memory`
+in `base/cordis.patch.yml`, next to `storage-domain`, is the whole host-plane integration. Note
+`base/cordis.patch.yml:1-7`: the file is "ONE insert over the empty profile root", later layers
+"address these rows by id, with the last write winning per row", and "a patch replaces the targeted
+row's whole `config` rather than merging into it" — so give the row a stable `id` that presets and
+later overlays can address, and put no mode-varying value in its `config`.
+
+> The `base.cordis.yml` + `web.cordis.yml` filenames in
+> `dsh-plugin-desktop/presets/education/agent.cordis.yml:12-13` do not exist in this repository.
+> Neither does a `base.cordis.yml` anywhere outside `node_modules`. The bundles' real composition
+> files are named `cordis.patch.yml`. Treat that preset comment as a stale name and use the paths
+> above.
 
 ---
 
@@ -654,13 +690,14 @@ deliverable creates the first two; the rest are the implementer's:
 
 Recorded honestly rather than guessed:
 
-1. **The host-plane composition file for the desktop product.** `base.cordis.yml` /
-   `web.cordis.yml` are named in
-   `dsh-plugin-desktop/presets/education/agent.cordis.yml:12-13`, but no such file exists anywhere
-   in the repository at the time of writing (a recursive search for `*.cordis.yml` outside
-   `node_modules` returns only upstream preset files, the desktop preset, and no host
-   composition). The mount plane in §12.1 is therefore a derived requirement, not a verified path.
-   The integrator must locate the real host composition.
+1. **Which plane the service should ideally live on is a product decision, not a located fact.**
+   §12.1 gives the mechanical answer: one row in
+   `deepseek-harness/packages/bundle/base/cordis.patch.yml`, beside `storage-domain`. What I could
+   not confirm is whether a *teacher-specific* service belongs in the shared base bundle (which
+   every profile, including non-teacher ones, would then load) or in a desktop-owned patch layer
+   over it. `deepseek-harness/AGENTS.md` forbids editing the upstream submodule from a desktop
+   feature branch, so the integration almost certainly belongs in a desktop-owned layer — but
+   which one is the integrator's call. Design and schema only; no wiring was attempted.
 2. **Whether DSH has a per-step *system prompt* hook distinct from `system-prompt/assemble`.**
    `domain.ts`/`index.ts` for `system-prompt` show assembly happens before each model step and
    exposes `section()` / `context()` / `tools()` providers plus the `system-prompt/assemble`
@@ -671,10 +708,19 @@ Recorded honestly rather than guessed:
 4. **Zod is not resolvable from `teacher/packages/`.** `teacher/node_modules` is a pnpm layout with
    no hoisted `zod`, and `teacher/packages/*` have no `node_modules`. `schema.ts` therefore imports
    nothing. The implementer must add a package manifest with `zod` (the upstream version is
-   `^4.4.3`, per `deepseek-harness/packages/storage/storage-domain/package.json`) before projecting
-   the zod record schemas.
+   `^4.4.3`, declared by both
+   `deepseek-harness/packages/storage/storage-domain/package.json` and
+   `deepseek-harness/packages/workspace/workspace/package.json`) before projecting the zod record
+   schemas.
 5. **`MemoryId` / `MemoryCandidateId` branding.** This schema declares them as branded strings
    following the harness convention (`Opaque cross-boundary ids are branded`). `dsh-brand` is
    available upstream but is not resolvable from `teacher/packages/` for the same reason as (4),
    so the brand is declared locally. Whoever integrates should switch to
    `brandString<MemoryId>()` if the package gains upstream dependencies.
+
+### Resolved during verification
+
+- **`MEMORY_DOMAIN.name = 'global_memory'` is valid.** `UNIT_NAME_RE` is
+  `/^[a-z][a-z0-9_]*$/` (`deepseek-harness/packages/storage/storage/src/backend.ts:10`), so
+  `global_memory` passes, as do the table names `memories` and `question_ledger`. `defineDomain`
+  enforces this at load (`storage-domain/src/spec.ts:108-110`, `:136-139`).

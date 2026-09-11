@@ -2,7 +2,8 @@
 
 Every design decision in [`README.md`](./README.md) and every type in [`schema.ts`](./schema.ts)
 maps onto something this repository actually has. This file records that mapping, plus the
-verification I ran and the two claims I know are wrong or unconfirmed.
+verification I ran, the three citations I got wrong on the first pass, and what remains
+unconfirmed.
 
 ---
 
@@ -205,10 +206,10 @@ are all verified as executing TypeScript, not just as types. (Console output was
 and numeric values only; Chinese strings were verified with the `read` tool, per the known console
 UTF-8 limitation.)
 
-### 4.3 Citation verification — 45 citations checked, 2 corrected
+### 4.3 Citation verification — 51 citations checked, 3 corrected
 
 Every `file:line` in `README.md` and in this file was re-opened and read at the cited line before
-this file was written. Two were wrong on the first pass and are corrected in the shipped files:
+this file was written. Three were wrong on the first pass and are corrected in the shipped files:
 
 1. **`tool-skill/src/index.ts:164-167`** (draft) → shipped as **`:163-176`**. The placement-reasoning
    comment starts at `:163`, not `:164`; the range is one line wider. Verified by reading
@@ -217,11 +218,19 @@ this file was written. Two were wrong on the first pass and are corrected in the
    **`:83-84` for `tool-fs`/`tool-fs-search` only**, with the `tools` registry claim moved to the
    realm rule at `:16-23`. The file's `tools`-registry statement is in the header comment, not next
    to those rows; citing `:83-84` for it would have been a real misattribution.
+3. **§12.1's host-plane claim** (draft: "the exact host composition file is not identified here") →
+   shipped as a located path, `deepseek-harness/packages/bundle/base/cordis.patch.yml:141-156`. My
+   first search used `Get-ChildItem -Filter *.cordis.yml`, which matched neither the bundle patches
+   (named `cordis.patch.yml`) nor anything else, and I nearly shipped "no host composition exists"
+   on the strength of a glob that could not have found it. Searching for `base.cordis.yml` by name
+   turned up nothing, but searching the bundle packages for `storage|tools|system-prompt` found the
+   real composition in one step. The shipped text now cites the real file and names the stale
+   `base.cordis.yml` / `web.cordis.yml` reference as stale.
 
-One citation is deliberately soft and labelled as such in README §15 item 4: `zod` is `^4.4.3` per
-`deepseek-harness/packages/storage/storage-domain/package.json`, read with `Select-String` rather
-than `read` (a JSON manifest, not prose). The two consumers' manifests agree
-(`workspace/workspace/package.json` also declares `zod: ^4.4.3`).
+One citation is deliberately soft and labelled as such in README §15 item 4: `zod` is `^4.4.3`,
+read from `deepseek-harness/packages/storage/storage-domain/package.json` and
+`deepseek-harness/packages/workspace/workspace/package.json` with `Select-String` rather than
+`read` (JSON manifests, not prose).
 
 ---
 
@@ -229,12 +238,15 @@ than `read` (a JSON manifest, not prose). The two consumers' manifests agree
 
 Restated from README §15, because these are the parts an integrator must not treat as settled:
 
-1. **The desktop host-plane composition file.** `dsh-plugin-desktop/presets/education/agent.cordis.yml:12-13`
-   names `base.cordis.yml` + `web.cordis.yml`, but a recursive `*.cordis.yml` search over the whole
-   repository (excluding `node_modules`) finds **no such file**. Everything in README §12.1 about
-   where the service must be mounted is therefore derived from the realm rule at
-   `agent.cordis.yml:16-23` plus the host-plane list in the same file's comments — not from a
-   located host composition. This is the single largest open item.
+1. **Which plane the service should live on is a product decision.** The *mechanics* are settled:
+   one `- insert:` row in `deepseek-harness/packages/bundle/base/cordis.patch.yml`, beside
+   `storage-domain` at `:153-156`, whose `config: { backend: json }` already routes every domain to
+   the JSON backend rooted at `dshHomePath('storages')` (`:148-151`). What I could not confirm is
+   whether a teacher-specific service belongs in the shared base bundle, which every profile loads,
+   or in a desktop-owned patch layer over it.
+   `deepseek-harness/AGENTS.md` forbids editing the upstream submodule from a desktop feature
+   branch, so it is almost certainly the latter — but the specific layer is the integrator's call,
+   and no wiring was attempted per the task's explicit instruction.
 2. **No separate per-step system-prompt hook.** I searched `core/system-prompt/src/*.ts` and
    `core/agent/src/*.ts` for a pre-step prompt event and found only `agent/pre-step` and
    `system-prompt/assemble`. "Cannot confirm an alternative injection point exists" is the accurate
@@ -249,9 +261,17 @@ Restated from README §15, because these are the parts an integrator must not tr
    brand because `@deepseek-ai/dsh-brand` is not resolvable there either. AGENTS.md requires branded
    cross-boundary ids, so this is a temporary local form; switch to `brandString<...>()` once the
    package has upstream dependencies.
-6. **`MEMORY_DOMAIN.name = 'global_memory'` is unchecked against `UNIT_NAME_RE`.** I read the
-   regex's *usage* (`spec.ts:108-110`, `:136-139`) but did not read its definition in
-   `@deepseek-ai/dsh-storage`, so the two-underscore-free, lowercase form is inferred from the
-   error messages and every observed domain name (`workspace`, `session_projcache`) rather than
-   verified against the pattern itself. `defineDomain` fails loud at load, so a wrong name is
-   caught immediately at integration — but it is not confirmed here.
+
+### Resolved after the first pass
+
+- **`MEMORY_DOMAIN.name = 'global_memory'` passes `UNIT_NAME_RE`.** The pattern is
+  `/^[a-z][a-z0-9_]*$/`, read directly at
+  `deepseek-harness/packages/storage/storage/src/backend.ts:10` and re-exported at
+  `.../storage/src/index.ts:15`. `global_memory`, `memories`, and `question_ledger` all match.
+  `defineDomain` enforces the pattern on the domain name and every table name at load
+  (`storage-domain/src/spec.ts:108-110`, `:136-139`).
+- **`base.cordis.yml` / `web.cordis.yml` do not exist.** A name search over the whole repository
+  including `node_modules` returns nothing. The bundles' composition files are `cordis.patch.yml`
+  (`deepseek-harness/packages/bundle/{base,web-app,headless,acp-app,sdk-app,sdk-minimal}/cordis.patch.yml`).
+  The preset comment at `dsh-plugin-desktop/presets/education/agent.cordis.yml:12-13` names files
+  that are not present.

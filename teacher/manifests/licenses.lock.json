@@ -1,12 +1,12 @@
 {
   "name": "teacher-licenses.lock",
   "version": "0.1.0",
-  "generatedAt": "2026-09-11T10:20:18.884Z",
+  "generatedAt": "2026-09-12T14:47:00.177Z",
   "policy": "Every component shipped in the installer must appear here with a license. CC BY-SA 4.0 components keep their attribution and license text.",
   "curated": [
     {
       "name": "DeepSeek Harness",
-      "version": "0.1.2-rc.1",
+      "version": "0.1.5-rc.2",
       "license": "MIT",
       "source": "https://github.com/deepseek-ai/deepseek-harness",
       "role": "Agent runtime, plugin loader, client UI, and tool protocol"

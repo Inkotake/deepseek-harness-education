@@ -4,13 +4,13 @@ Teacher DSH is a redistribution that bundles the components below. Each componen
 
 Verbatim license texts are collected in [`licenses/`](./licenses).
 
-Generated: 2026-09-11T10:20:18.884Z
+Generated: 2026-09-12T14:47:00.177Z
 
 ## Bundled components
 
 | Component | Version | License | Role |
 |---|---|---|---|
-| DeepSeek Harness | 0.1.2-rc.1 | MIT | Agent runtime, plugin loader, client UI, and tool protocol |
+| DeepSeek Harness | 0.1.5-rc.2 | MIT | Agent runtime, plugin loader, client UI, and tool protocol |
 | DSH Desktop (anywhere-labs) | v2.0.5 | MIT | Electron shell, profile manager, and packaging pipeline this distribution builds on |
 | Node.js | 22.23.2 | MIT | Bundled JavaScript runtime used by every Teacher command |
 | pnpm | 11.8.0 | MIT | Bundled package manager for artifact projects |

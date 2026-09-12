@@ -24,6 +24,14 @@ const LOCK_FILE = path.join(TEACHER, 'manifests', 'licenses.lock.json')
 
 const LICENSE_FILE_PATTERN = /^(LICEN[CS]E|COPYING|NOTICE)(\.(md|txt|rst))?$/iu
 
+// The Harness version comes from the pin, never a literal. It was hardcoded once and silently
+// went stale, so the shipped notice claimed a release the distribution no longer contains.
+const UPSTREAM = JSON.parse(fs.readFileSync(path.join(ROOT, 'upstream.json'), 'utf8'))
+const HARNESS_VERSION = UPSTREAM.channels?.[UPSTREAM.activeChannel]?.sourceVersion
+if (typeof HARNESS_VERSION !== 'string' || HARNESS_VERSION === '') {
+  throw new Error('upstream.json has no sourceVersion for the active channel')
+}
+
 /**
  * Components that are not discoverable by walking `node_modules`, with the license text that
  * must travel with the distribution.
@@ -31,7 +39,7 @@ const LICENSE_FILE_PATTERN = /^(LICEN[CS]E|COPYING|NOTICE)(\.(md|txt|rst))?$/iu
 const CURATED = [
   {
     name: 'DeepSeek Harness',
-    version: '0.1.2-rc.1',
+    version: HARNESS_VERSION,
     license: 'MIT',
     source: 'https://github.com/deepseek-ai/deepseek-harness',
     role: 'Agent runtime, plugin loader, client UI, and tool protocol',

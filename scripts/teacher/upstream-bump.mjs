@@ -5,12 +5,12 @@
  * This is deliberately a *thin orchestrator over the repository's own upstream tooling*. It
  * never synthesises a runtime from published npm tarballs, because the vendor directory must be
  * an `official`-profile build produced by upstream's own `release:pack`. Everything it runs is a
- * command that already exists in this repository or in the Harness submodule.
+ * command that already exists in this repository or in the fetched Harness checkout.
  *
  * The sequence, and why each step exists:
  *
  *   1. resolve the target release            (the tag `dsh-v<version>` in the Harness repository)
- *   2. check out that tag in the submodule   (the pin is a commit, not a floating branch)
+ *   2. check out that tag in the upstream checkout   (the pin is a commit, not a floating branch)
  *   3. yarn upstream:prepare-runtime         (install + build:official + release:pack --family dsh)
  *   4. verify the pack output                (release:pack writes deepseek-harness/dist/npm)
  *   5. rewrite the upstream.json pin         (commit + sourceVersion)
@@ -191,7 +191,7 @@ function main() {
   const tag = `dsh-v${TARGET}`
   let commit
   try {
-    // The submodule's origin is the Harness repository, so its tags are the authority.
+    // The fetched checkout's origin is the Harness repository, so its tags are the authority.
     const transport = fetchUpstreamTags()
     commit = git(['-C', HARNESS, 'rev-list', '-n', '1', tag])
     record('resolve upstream tag', 'ok', `${tag} -> ${commit.slice(0, 12)} (${transport})`)
@@ -202,12 +202,12 @@ function main() {
   }
 
   // --- 2. check the pin out (a commit, never a floating branch) -----------------------------------
-  if (run('git', ['-C', HARNESS, 'checkout', '--detach', commit], { label: 'checkout submodule' }) !== 0) {
-    record('checkout submodule', 'blocked', `could not check out ${commit.slice(0, 12)}`)
-    fail('submodule checkout failed')
+  if (run('git', ['-C', HARNESS, 'checkout', '--detach', commit], { label: 'checkout upstream' }) !== 0) {
+    record('checkout upstream', 'blocked', `could not check out ${commit.slice(0, 12)}`)
+    fail('upstream checkout failed')
     return
   }
-  record('checkout submodule', DRY_RUN ? 'skip' : 'ok', commit.slice(0, 12))
+  record('checkout upstream', DRY_RUN ? 'skip' : 'ok', commit.slice(0, 12))
 
   // --- 3. produce the runtime with upstream's own tooling -----------------------------------------
   //    build:official matters: the vendor manifest must carry buildProfile "official".

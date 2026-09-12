@@ -1,7 +1,6 @@
 /** The framed Desktop chrome used by compatibility mode. */
 
 import {
-  EXTENDED_INNER_CORNER_RADIUS,
   DESKTOP_FRAME_HEIGHT,
   MACOS_TRAFFIC_LIGHT_SAFE_WIDTH,
   WINDOWS_CAPTION_CONTROLS_WIDTH,
@@ -10,18 +9,18 @@ import {
 const STYLE_ID = 'dsh-desktop-framed-styles'
 
 const CSS = `
-html:has(body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])),
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"]) {
+html:has(body[data-dsh-desktop-mode="compatibility"]),
+body[data-dsh-desktop-mode="compatibility"] {
   width: 100%;
   height: 100%;
 }
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"]) {
+body[data-dsh-desktop-mode="compatibility"] {
   --dsh-desktop-frame-height: ${DESKTOP_FRAME_HEIGHT}px;
   margin: 0;
   overflow: hidden;
   background: transparent !important;
 }
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"]) #root {
+body[data-dsh-desktop-mode="compatibility"] #root {
   box-sizing: border-box;
   position: fixed;
   top: ${DESKTOP_FRAME_HEIGHT}px;
@@ -36,20 +35,20 @@ body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extende
 }
 /* The custom frame owns the top band. A shell overlay is the containing block
    for fixed plugin surfaces, so they cannot escape into Desktop chrome. */
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   [data-shell-overlay] {
   overflow: hidden;
   transform: translateZ(0);
 }
 /* Full-viewport dialogs portalled directly to body still belong to content. */
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   > [role="presentation"]:has(> [aria-modal="true"]),
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   > [aria-modal="true"] {
   top: var(--dsh-desktop-frame-height) !important;
   transform: translateZ(0);
 }
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   [data-slot="sidebar.footer.action"] {
   display: flex !important;
   flex-direction: column;
@@ -62,46 +61,22 @@ body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extende
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   [data-slot="sidebar.footer.action"] > * {
   flex: none;
   min-width: 0;
 }
-body[data-dsh-desktop-mode="extended"] .dshDesktopSidebarSurface {
-  --dsw-specific-sidebar-fill: transparent;
-  border-right-color: transparent;
-  background: transparent !important;
-}
-body[data-dsh-desktop-mode="extended"] .dshDesktopFrame {
-  background: var(--dsh-desktop-frame-fill);
-}
-body[data-dsh-desktop-mode="extended"] .dshDesktopConversationSurface {
-  box-sizing: border-box;
-  overflow: hidden;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-  border-left: 1px solid var(--dsw-alias-border-l1);
-  border-top-left-radius: ${EXTENDED_INNER_CORNER_RADIUS}px;
-  background: var(--dsw-alias-bg-base);
-  background-clip: padding-box;
-}
-body[data-dsh-desktop-mode="extended"] .dshDesktopDetailsSurface {
-  box-sizing: border-box;
-  border-top: 1px solid var(--dsw-alias-border-l1);
-}
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   [data-dsh-desktop-content-viewport],
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])
+body[data-dsh-desktop-mode="compatibility"]
   [data-dsh-desktop-frame="titlebar"] {
   isolation: isolate;
 }
-body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"])[data-dsh-desktop-material="off"] {
+body[data-dsh-desktop-mode="compatibility"][data-dsh-desktop-material="off"] {
   --dsh-desktop-frame-fill: var(--dsw-alias-bg-layer-1);
 }
 body[data-dsh-desktop-mode="compatibility"]:not([data-dsh-desktop-material="off"]) {
   --dsh-desktop-frame-fill: color-mix(in srgb, var(--dsw-alias-bg-base) 54%, transparent);
-}
-body[data-dsh-desktop-mode="extended"]:not([data-dsh-desktop-material="off"]) {
-  --dsh-desktop-frame-fill: color-mix(in srgb, var(--dsw-alias-bg-base) 18%, transparent);
 }
 .dshDesktopFrameTitlebar {
   position: fixed;

@@ -129,7 +129,7 @@ function main() {
         'resources/teacher-runtime/{manifests,seed} (scripts/teacher/build-*)',
       ],
     },
-    submodulePinnedAt: submoduleCommit(),
+    upstreamPinnedAt: upstreamCommit(),
   }
 
   if (JSON_OUTPUT) {
@@ -141,7 +141,7 @@ function main() {
   log(`  channel            : ${channel}`)
   log(`  pinned Harness     : ${String(report.pinnedVersion)} (${String(report.pinnedCommit).slice(0, 12)})`)
   log(`  plugin dependency  : ${String(report.pluginDependency)}`)
-  log(`  submodule checkout : ${String(report.submodulePinnedAt).slice(0, 12)}`)
+  log(`  upstream checkout : ${String(report.upstreamPinnedAt).slice(0, 12)}`)
   log(`  vendor directory   : ${report.vendorDirectory}`)
   log(`  vendor tarballs    : ${String(report.vendorTarballs)} (build profile ${String(report.vendorBuildProfile)})`)
   log('')
@@ -161,8 +161,8 @@ function main() {
   }
 }
 
-/** The Harness commit the submodule is currently checked out at. */
-function submoduleCommit() {
+/** The Harness commit the fetched checkout is currently at. */
+function upstreamCommit() {
   try {
     return execFileSync('git', ['-C', path.join(ROOT, 'deepseek-harness'), 'rev-parse', 'HEAD'], {
       encoding: 'utf8',

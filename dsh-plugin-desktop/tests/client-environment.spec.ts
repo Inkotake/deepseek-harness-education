@@ -192,7 +192,7 @@ describe('advanced desktop layout', () => {
     expect(disposed).toBe(true)
   })
 
-  it('keeps the enhanced root registration independent from the extended frame', () => {
+  it('keeps the advanced root registration independent from the framed mode', () => {
     const registrations: Array<Record<string, unknown>> = []
     const occupants: unknown[] = []
     const disposers: Array<() => void> = []
@@ -384,7 +384,7 @@ describe('advanced desktop layout', () => {
 })
 
 describe('independent Desktop frame', () => {
-  it('reserves a command bar for both framed modes and limits the inverted-L surface to extended mode', () => {
+  it('reserves a command bar for the framed mode', () => {
     let css = ''
     const remove = vi.fn()
     const style = {
@@ -409,10 +409,10 @@ describe('independent Desktop frame', () => {
       expect(css).toMatch(/\[data-slot="sidebar\.footer\.action"\] > \* \{[^}]*flex: none;[^}]*min-width: 0;/)
       expect(css).toMatch(/\[role="presentation"\]:has\(> \[aria-modal="true"\]\),[\s\S]*> \[aria-modal="true"\] \{[\s\S]*top: var\(--dsh-desktop-frame-height\) !important;/)
       expect(css).not.toContain('#root > :has(> [data-shell-overlay])')
-      expect(css).toMatch(/body\[data-dsh-desktop-mode="extended"\] \.dshDesktopSidebarSurface \{[^}]*--dsw-specific-sidebar-fill: transparent;[^}]*border-right-color: transparent;[^}]*background: transparent !important;/)
-      expect(css).toMatch(/body\[data-dsh-desktop-mode="extended"\] \.dshDesktopFrame \{[^}]*background: var\(--dsh-desktop-frame-fill\);/)
-      expect(css).toMatch(/body\[data-dsh-desktop-mode="extended"\] \.dshDesktopConversationSurface \{[^}]*border-top: 1px solid var\(--dsw-alias-border-l1\);[^}]*border-left: 1px solid var\(--dsw-alias-border-l1\);[^}]*border-top-left-radius: 10px;/)
-      expect(css).toContain('body:is([data-dsh-desktop-mode="compatibility"], [data-dsh-desktop-mode="extended"]) #root')
+      // The rules that styled the removed `extended` mode are gone: nothing can carry that
+      // attribute value any more, so asserting them would pin unreachable CSS.
+      expect(css).not.toContain('data-dsh-desktop-mode="extended"')
+      expect(css).toContain('body[data-dsh-desktop-mode="compatibility"] #root')
       expect(css).toMatch(/\.dshDesktopFrameTitlebar \{[^}]*-webkit-app-region: drag;/)
       expect(css).toMatch(/\.dshDesktopFrameTitlebar \{[^}]*z-index: 2147483647;/)
       expect(css).toMatch(/\.dshDesktopFrameIdentity \{[^}]*left: 50%;[^}]*transform: translateX\(-50%\);/)

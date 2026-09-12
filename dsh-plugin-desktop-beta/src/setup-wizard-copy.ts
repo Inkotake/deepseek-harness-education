@@ -14,8 +14,6 @@ export interface DesktopSetupWizardCopy {
   readonly presentationBody: string
   readonly compatibilityMode: string
   readonly compatibilityModeBody: string
-  readonly extendedMode: string
-  readonly extendedModeBody: string
   readonly advancedMode: string
   readonly advancedModeBody: string
   readonly unavailableOnLinux: string
@@ -86,8 +84,6 @@ const COPY: Record<DesktopLocale, DesktopSetupWizardCopy> = {
     presentationBody: 'Choose how DSH Desktop presents the official client.',
     compatibilityMode: 'Compatibility mode',
     compatibilityModeBody: 'Keep the official client layout for the broadest compatibility.',
-    extendedMode: 'Extended window',
-    extendedModeBody: 'Add Desktop controls around the official content area.',
     advancedMode: 'Enhanced mode',
     advancedModeBody: 'Use the layout and window interactions optimized for Desktop.',
     unavailableOnLinux: 'This mode is currently available on macOS and Windows.',
@@ -156,8 +152,6 @@ const COPY: Record<DesktopLocale, DesktopSetupWizardCopy> = {
     presentationBody: '选择 DSH Desktop 如何呈现官方客户端。',
     compatibilityMode: '兼容模式',
     compatibilityModeBody: '保留官方客户端布局，兼容性最好。',
-    extendedMode: '扩展窗口',
-    extendedModeBody: '在官方内容区域周围增加桌面控制。',
     advancedMode: '增强模式',
     advancedModeBody: '使用针对桌面端优化的布局和窗口交互。',
     unavailableOnLinux: '此模式目前支持 macOS 和 Windows。',

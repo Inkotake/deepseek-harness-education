@@ -123,7 +123,7 @@ licenses/                 随包发放内容的许可证原文
 THIRD_PARTY_NOTICES.md    自动生成的组件与 npm 依赖清单
 ```
 
-其余顶层目录：`dsh-plugin-desktop-beta/` 是同一个桌面包的 beta 通道；`dsh-community-market/` 和 `dsh-community-fabric/` 分别是桌面的插件市场与社区互操作文档骨架；`docs/` 是桌面文档索引；`tests/` 放教具与 PPT 的 smoke 套件；`.github/workflows/` 是发布流水线。
+其余顶层目录：`dsh-community-market/` 和 `dsh-community-fabric/` 分别是桌面的插件市场与社区互操作文档骨架；`docs/` 是桌面文档索引；`tests/` 放教具与 PPT 的 smoke 套件；`.github/workflows/` 是发布流水线。
 
 `resources/dsh-runtime/` 和 `resources/teacher-runtime/` 是**构建产物，不入库**。它们由下面的脚本生成，再通过 electron-builder 的 `extraResources` 进入安装包。`dsh-plugin-desktop/dist/` 同样是构建产物。
 

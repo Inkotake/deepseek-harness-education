@@ -13,7 +13,7 @@
 // recorded this fork's own commits as if they were upstream.
 //
 // Usage:
-//   node scripts/teacher/sync-upstream.mjs [--desktop-commit <sha>] [--channel <stable|beta>]
+//   node scripts/teacher/sync-upstream.mjs [--desktop-commit <sha>] [--channel <name>]
 //
 // GitHub Actions runs it from `.github/workflows/upstream-watch.yml` on a schedule and on manual
 // dispatch; that workflow opens a pull request on drift and never pushes the default branch.
@@ -26,7 +26,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const lockFile = path.join(root, 'teacher', 'manifests', 'desktop-upstream.lock.json')
 const upstreamFile = path.join(root, 'upstream.json')
 
-const KNOWN_CHANNELS = ['stable', 'beta']
+// Validated against the channels `upstream.json` actually declares, so removing a channel cannot
+// leave a name here that no longer resolves.
+const KNOWN_CHANNELS = Object.keys(JSON.parse(fs.readFileSync(upstreamFile, 'utf8')).channels ?? {})
 const SHA_PATTERN = /^[0-9a-f]{40}$/u
 
 function fail(message) {

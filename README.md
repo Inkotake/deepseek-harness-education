@@ -153,11 +153,10 @@ licenses/                 Verbatim license texts for everything in the shipped p
 THIRD_PARTY_NOTICES.md    Generated inventory of bundled components and npm dependencies
 ```
 
-Supporting entries: `dsh-plugin-desktop-beta/` is the beta channel of the same desktop package;
-`dsh-community-market/` and `dsh-community-fabric/` are the desktop's plugin market and its
-community interoperability documentation scaffold; `docs/` is the desktop documentation index;
-`tests/` holds the artifact and presentation smoke suites; `.github/workflows/` holds the release
-pipeline.
+Supporting entries: `dsh-community-market/` and `dsh-community-fabric/` are the desktop's plugin
+market and its community interoperability documentation scaffold; `docs/` is the desktop
+documentation index; `tests/` holds the artifact and presentation smoke suites;
+`.github/workflows/` holds the release pipeline.
 
 `resources/dsh-runtime/` and `resources/teacher-runtime/` are **build outputs and are not
 committed**. They are produced by the scripts below and enter the installer through

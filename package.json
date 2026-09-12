@@ -9,7 +9,6 @@
   },
   "workspaces": [
     "dsh-plugin-desktop",
-    "dsh-plugin-desktop-beta",
     "dsh-community-fabric",
     "dsh-community-market"
   ],
@@ -577,17 +576,16 @@
     }
   },
   "scripts": {
-    "build": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop build && yarn workspace dsh-plugin-desktop-beta build",
-    "typecheck": "yarn workspace dsh-plugin-desktop typecheck && yarn workspace dsh-plugin-desktop-beta typecheck && yarn workspace dsh-community-market typecheck",
-    "test": "yarn workspace dsh-plugin-desktop test && yarn workspace dsh-plugin-desktop-beta test && yarn workspace dsh-community-market test",
+    "build": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop build",
+    "typecheck": "yarn workspace dsh-plugin-desktop typecheck && yarn workspace dsh-community-market typecheck",
+    "test": "yarn workspace dsh-plugin-desktop test && yarn workspace dsh-community-market test",
     "test:bilingual-docs": "node --test scripts/bilingual-docs.test.mjs",
     "check:bilingual-docs": "yarn test:bilingual-docs && node scripts/verify-bilingual-docs.mjs",
     "test:architecture-gates": "node --test scripts/market-dependency-direction.test.mjs",
     "check:architecture": "yarn test:architecture-gates && node scripts/verify-market-dependency-direction.mjs",
-    "check:vendored-runtime": "node scripts/sync-vendored-runtime.mjs --check --channel stable && node scripts/sync-vendored-runtime.mjs --check --channel beta",
-    "check:desktop-variants": "node scripts/verify-desktop-variants.mjs",
-    "check:layout": "yarn check:bilingual-docs && yarn check:architecture && yarn check:vendored-runtime && yarn check:desktop-variants && node scripts/verify-layout.mjs",
-    "check": "yarn check:layout && yarn workspace dsh-community-fabric check && yarn workspace dsh-community-market check && yarn workspace dsh-plugin-desktop check && yarn workspace dsh-plugin-desktop-beta check",
+    "check:vendored-runtime": "node scripts/sync-vendored-runtime.mjs --check --channel stable",
+    "check:layout": "yarn check:bilingual-docs && yarn check:architecture && yarn check:vendored-runtime && node scripts/verify-layout.mjs",
+    "check": "yarn check:layout && yarn workspace dsh-community-fabric check && yarn workspace dsh-community-market check && yarn workspace dsh-plugin-desktop check",
     "dev": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dev",
     "start": "yarn workspace dsh-plugin-desktop start",
     "package:dir": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop package:dir",
@@ -600,13 +598,6 @@
     "upstream:build": "cd deepseek-harness && corepack pnpm run build",
     "upstream:build:official": "cd deepseek-harness && CI=true DSH_BUILD_CLIENT_PROFILE=official corepack pnpm run build",
     "upstream:pack:dsh": "cd deepseek-harness && CI=true corepack pnpm run release:pack --family dsh",
-    "upstream:prepare-runtime": "yarn upstream:install && yarn upstream:build:official && yarn upstream:pack:dsh",
-    "dev:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dev",
-    "start:beta": "yarn workspace dsh-plugin-desktop-beta start",
-    "package:dir:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta package:dir",
-    "dist:mac:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac",
-    "dist:mac-smoke:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac-smoke",
-    "dist:win:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win",
-    "dist:win-portable:beta": "yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win-portable"
+    "upstream:prepare-runtime": "yarn upstream:install && yarn upstream:build:official && yarn upstream:pack:dsh"
   }
 }

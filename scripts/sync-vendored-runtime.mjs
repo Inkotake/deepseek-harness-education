@@ -19,7 +19,7 @@ const channelFlag = process.argv.indexOf('--channel')
 const requestedChannel = channelFlag === -1 ? undefined : process.argv[channelFlag + 1]
 
 if (mode !== '--write' && mode !== '--check') {
-  throw new Error('usage: node scripts/sync-vendored-runtime.mjs <--write|--check> [--channel stable|beta]')
+  throw new Error('usage: node scripts/sync-vendored-runtime.mjs <--write|--check> [--channel <name>]')
 }
 
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'))
@@ -33,18 +33,21 @@ const fail = message => { throw new Error(`sync-vendored-runtime: ${message}`) }
 
 const upstreamDocument = readJson(upstreamPath)
 const channel = requestedChannel ?? upstreamDocument.activeChannel
-if (channel !== 'stable' && channel !== 'beta') fail(`unknown release channel ${JSON.stringify(channel)}`)
-const upstream = upstreamDocument.channels?.[channel]
-if (upstream === undefined || typeof upstream !== 'object') fail(`missing upstream metadata for ${channel}`)
-const otherChannel = channel === 'stable' ? 'beta' : 'stable'
-const otherVersion = upstreamDocument.channels?.[otherChannel]?.sourceVersion
-if (typeof otherVersion !== 'string' || !/^[0-9A-Za-z][0-9A-Za-z.-]*$/u.test(otherVersion)) {
-  fail(`unsafe ${otherChannel} source version ${JSON.stringify(otherVersion)}`)
+const declaredChannels = Object.keys(upstreamDocument.channels ?? {})
+if (!declaredChannels.includes(channel)) {
+  fail(`unknown release channel ${JSON.stringify(channel)}; upstream.json declares ${declaredChannels.join(', ')}`)
 }
-const pluginPaths = [
-  join(root, upstream.package, 'package.json'),
-  ...(channel === 'beta' ? [join(root, 'dsh-community-market', 'package.json')] : []),
-]
+const upstream = upstreamDocument.channels[channel]
+if (upstream === undefined || typeof upstream !== 'object') fail(`missing upstream metadata for ${channel}`)
+// Versions belonging to a DIFFERENT declared channel. A sync of this channel has to leave those
+// resolutions alone, so they are collected rather than assumed: with one declared channel the set
+// is empty and the predicate below is simply always false, which is the honest answer rather than
+// a hardcoded second channel name that no longer exists.
+const otherVersions = declaredChannels
+  .filter(name => name !== channel)
+  .map(name => upstreamDocument.channels[name]?.sourceVersion)
+  .filter(candidate => typeof candidate === 'string' && /^[0-9A-Za-z][0-9A-Za-z.-]*$/u.test(candidate))
+const pluginPaths = [join(root, upstream.package, 'package.json')]
 const version = upstream.sourceVersion
 if (typeof version !== 'string' || !/^[0-9A-Za-z][0-9A-Za-z.-]*$/u.test(version)) {
   fail(`unsafe source version ${JSON.stringify(version)}`)
@@ -56,8 +59,8 @@ const manifestPath = join(vendorDirectory, 'manifest.json')
 const resolutionSelector = (name, range = version) => `${name}@npm:${range}`
 const isChannelResolution = selector => selector.endsWith(`@npm:${version}`)
   || selector.endsWith(`@npm:^${version}`)
-const isOtherChannelResolution = selector => selector.endsWith(`@npm:${otherVersion}`)
-  || selector.endsWith(`@npm:^${otherVersion}`)
+const isOtherChannelResolution = selector =>
+  otherVersions.some(other => selector.endsWith(`@npm:${other}`) || selector.endsWith(`@npm:^${other}`))
 
 function packageName(filename) {
   const suffix = `-${version}.tgz`

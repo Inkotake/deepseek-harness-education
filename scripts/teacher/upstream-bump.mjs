@@ -362,7 +362,7 @@ function main() {
   record('adopt vendored plugins', 'todo', 're-check every vendored plugin against the new peer ranges (scripts/teacher/vendor-plugins.mjs)')
   record('adapt desktop source', 'todo', 'run yarn workspace dsh-plugin-desktop build and fix API drift')
   record('rebuild teacher runtime', 'todo', 'node scripts/teacher/build-teacher-runtime.mjs && node scripts/teacher/build-profile-seed.mjs')
-  record('verify', 'todo', 'node scripts/verify-desktop-variants.mjs && node scripts/teacher/verify-*.mjs && node scripts/teacher/smoke-package.mjs')
+  record('verify', 'todo', 'node scripts/teacher/verify-*.mjs && node scripts/teacher/smoke-package.mjs')
 
   if (JSON_OUTPUT) {
     const from = Object.fromEntries(

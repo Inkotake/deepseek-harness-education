@@ -97,7 +97,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]
+        workspace: [dsh-plugin-desktop]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -137,7 +137,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        workspace: [dsh-plugin-desktop, dsh-plugin-desktop-beta]
+        workspace: [dsh-plugin-desktop]
     steps:
       - uses: actions/checkout@v6
         with:

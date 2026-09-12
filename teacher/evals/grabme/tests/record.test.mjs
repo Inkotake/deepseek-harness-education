@@ -57,10 +57,11 @@ test('without a credential the driver skips loudly and does not look like a pass
 })
 
 test('a configured credential changes the outcome, proving the skip is credential-driven', () => {
-  // The placeholder is deliberately not a working key: the run will fail, and that is the point.
-  // The assertion is only that the driver gets PAST the skip, which is what proves the skip was
-  // gated on the credential rather than on something else.
-  const result = runDriver([A_CASE, '--dsh', 'definitely-not-a-launcher'], {
+  // The launcher is a stub that exits immediately, so this stays fast and offline. The assertion is
+  // only that the driver gets PAST the skip — which is what proves the skip was gated on the
+  // credential rather than on something else.
+  const stub = join(HERE, 'fixtures', 'launcher-stub.mjs')
+  const result = runDriver([A_CASE, '--dsh', stub], {
     DEEPSEEK_API_KEY: 'placeholder-not-a-real-key',
   })
   assert.notEqual(result.status, 3)

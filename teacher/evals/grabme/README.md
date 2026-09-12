@@ -156,16 +156,33 @@ and exit"）——这是最接近老师第一轮真实交互的形态。日志�
 并以 **退出码 3** 结束——一个与任何真实结果都不冲突的码。任何按"有没有失败"来判断调用方，
 都不会把这次跳过当成干净的结果。
 
+**已经在官方网关上跑通了一条真实会话。** `vague-atmosphere-memory-covered` 经 `record.mjs` 起真实
+Host 会话、写出 `session.v3.jsonl.zstd`、由 `run.mjs` 算出八项指标、再由 `score.mjs` 对照断言评分：
+
+```
+Ask Rate 0 · Median clarification rounds 0 (PASS) · |M|=6 但 rel=0
+must_ask_about "教学侧重"  MISSING   ← 该问的没问
+must_offer_choices        FAILED    ← 一个可识别的选项都没给
+must_produce_brief        FAILED
+这条 case 共 3 项断言失败
+```
+
+**这条基线跑的是 `headless`（stock）组合，不含教育预设与 `teacher-grabme`**——它记录的正是
+"未经改进的默认行为"，也就是 GrabMe 要改善的对象。这些数字是实测的，不是推断的。
+
 ### 仍然没有实现的部分
 
 **剧本式回答与批量录制还没有。** `record.mjs` 起真实会话、把 `teacher_message` 当首条用户消息送出，
 但它**不会扮演老师回答 `ask_user_question`**：一条 case 只跑一轮，需要多轮澄清的 case（占多数）
-目前录不到完整轨迹。同样没有的还有：把 `preloaded_memory` 注入成会话前置记忆、原始归档、
-可配置重复轮数与并发度的成本控制。在它们落地之前，26 条 case 里的多轮场景仍然需要手工或另写脚本。
+目前录不到完整轨迹。同样没有的还有：把 `preloaded_memory` 注入成会话前置记忆（上面 `|M|=6` 来自
+case 自己的 `preloaded_memory`，不是注入进会话的）、原始归档、可配置重复轮数与并发度的成本控制。
 
-**本机没有跑通过一条真实会话。** 这台机器没有配置任何 provider 凭据，所以 driver 的实际执行路径
-（起 session → 写日志 → runner 打分）在这里**只验证到"会大声跳过"和 `--dry-run`**，没有验证到
-真实 provider 上的端到端结果。这一条不要当成已验证。
+**provider 的兼容边界（实测发现）**：harness 会往官方 DeepSeek 请求里加一个私有字段
+`dsh_plugin_packages`（由 `plugin-package-inventory-deepseek` 贡献，默认开启）。**官方网关接受它，
+通用 OpenAI-compatible 网关会回 `UNKNOWN_FIELD` 并让整个请求 HTTP 400。** 因此指向第三方网关时
+需要用 profile 覆盖把那一行的 `enabled` 设为 `false`。本目录曾短暂存在一个做这件事的
+`gateway.patch.yml`，**已删除**：它会连官方网关需要的字段一起关掉，作为随包产物是错的策略。
+正确形态应当是**按端点决定**（只在官方端点开启），而不是无条件关闭——目前尚未实现。
 
 落点说明：本次 runner 按交付要求放在 `teacher/evals/grabme/`（与 `cases.json`、`metrics.md`
 同目录），没有放进 `teacher/scripts/`；`deepseek-harness/` 内没有任何改动，`cases.json` 也

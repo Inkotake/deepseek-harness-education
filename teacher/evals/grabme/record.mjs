@@ -54,7 +54,15 @@ const SKIP_BANNER = [
 
 /** Parse the driver's own argv. */
 function parseArgv(argv) {
-  const options = { caseId: undefined, dryRun: false, home: undefined, dsh: undefined, profile: 'headless', timeoutSeconds: 600 }
+  const options = {
+    caseId: undefined,
+    dryRun: false,
+    home: undefined,
+    dsh: undefined,
+    dshArgs: [],
+    profile: 'headless',
+    timeoutSeconds: 600,
+  }
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
     if (token === '--dry-run') options.dryRun = true
@@ -62,6 +70,9 @@ function parseArgv(argv) {
     else if (token === '--dsh') options.dsh = argv[++i]
     else if (token === '--profile') options.profile = argv[++i]
     else if (token === '--timeout') options.timeoutSeconds = Number(argv[++i])
+    // Repeatable pass-through for the launcher's own flags, e.g. a `--patch` overlay that makes a
+    // generic gateway accept the request. The task stays the last positional.
+    else if (token === '--dsh-arg') options.dshArgs.push(argv[++i])
     else if (options.caseId === undefined && !token.startsWith('--')) options.caseId = token
     else throw new Error(`record: unrecognised argument ${JSON.stringify(token)}`)
   }
@@ -78,13 +89,21 @@ function findCredential() {
   return undefined
 }
 
-/** Locate the shipped launcher, preferring the packaged runtime over a bare source checkout. */
-function findLauncher(explicit) {
+/**
+ * Resolve the launcher's JavaScript entry.
+ *
+ * The package-manager bin directory holds an extensionless POSIX shim and a `.cmd` shim, and the
+ * `.cmd` only forwards to `node <pkg>/lib/bin.js`. Spawning the entry directly with
+ * `process.execPath` and an argv ARRAY avoids both traps: Windows cannot execute the extensionless
+ * shim at all (ENOENT), and a `.cmd` needs a shell, which would hand a teacher's Chinese message —
+ * quotes and all — to `cmd.exe` for re-parsing. `--dsh` takes this entry path, not a shim.
+ */
+function findEntry(explicit) {
   const candidates = [
-    explicit,
-    join(REPO, 'dsh-plugin-desktop', 'node_modules', '.bin', 'dsh'),
-    join(REPO, 'node_modules', '.bin', 'dsh'),
-  ].filter(candidate => typeof candidate === 'string' && candidate !== '')
+    ...(typeof explicit === 'string' && explicit !== '' ? [explicit] : []),
+    join(REPO, 'dsh-plugin-desktop', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
+    join(REPO, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
+  ]
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate
   }
@@ -122,9 +141,9 @@ function main() {
     throw new Error(`record: no case ${JSON.stringify(options.caseId)} in ${CASES}`)
   }
 
-  const launcher = findLauncher(options.dsh)
-  if (launcher === undefined) {
-    throw new Error('record: could not find the dsh launcher; pass --dsh <path>')
+  const entry = findEntry(options.dsh)
+  if (entry === undefined) {
+    throw new Error('record: could not find the dsh entry point; pass --dsh <path to lib/bin.js>')
   }
 
   const stamp = new Date().toISOString().replace(/[:.]/gu, '-')
@@ -132,11 +151,12 @@ function main() {
   const sessionRoot = join(home, 'sessions')
   mkdirSync(sessionRoot, { recursive: true })
 
-  const command = [launcher, '--profile', options.profile, testCase.teacher_message]
+  const command = [entry, '--profile', options.profile, ...options.dshArgs, testCase.teacher_message]
 
   if (options.dryRun) {
     console.log('record: dry run — nothing was executed.\n')
-    console.log(`  launcher     ${launcher}`)
+    console.log(`  entry        ${entry}`)
+    console.log(`  node         ${process.execPath}`)
     console.log(`  DSH_HOME     ${home}`)
     console.log(`  session root ${sessionRoot}`)
     console.log(`  case         ${testCase.id} (${testCase.category})`)
@@ -150,7 +170,7 @@ function main() {
   if (credential === undefined) {
     console.error(SKIP_BANNER)
     console.error(`record: case ${testCase.id} was NOT exercised.`)
-    console.error(`record: would have run — DSH_HOME=${home} ${launcher} --profile ${options.profile} <teacher_message>`)
+    console.error(`record: would have run — DSH_HOME=${home} node ${entry} --profile ${options.profile} <teacher_message>`)
     return SKIPPED_EXIT_CODE
   }
 
@@ -158,7 +178,7 @@ function main() {
   console.log(`record: credential from ${credential} · DSH_HOME=${home} · profile=${options.profile}`)
 
   const started = Date.now()
-  const result = spawnSync(launcher, ['--profile', options.profile, testCase.teacher_message], {
+  const result = spawnSync(process.execPath, [entry, '--profile', options.profile, ...options.dshArgs, testCase.teacher_message], {
     encoding: 'utf8',
     env: { ...process.env, DSH_HOME: home },
     timeout: options.timeoutSeconds * 1000,

@@ -33,6 +33,10 @@ teacher/legacy/node_modules/
 build/
 resources/dsh-runtime/
 resources/teacher-runtime/
+# The upstream source is FETCHED, not tracked, and deliberately not a Git submodule: a
+# submodule would put an upstream gitlink and `.gitmodules` entry in this repository. Fetch it
+# with `node scripts/teacher/fetch-upstream.mjs`; `upstream.json` holds the pin.
+deepseek-harness/
 resources/teacher-seed/plugins-built/
 
 # NOTE: licenses/ is intentionally NOT ignored. It holds the verbatim license text of every

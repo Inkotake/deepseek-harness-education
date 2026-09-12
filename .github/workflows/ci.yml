@@ -66,7 +66,8 @@ jobs:
         if: needs.changes.outputs.product == 'true'
         with:
           persist-credentials: false
-          submodules: recursive
+          # The upstream source is FETCHED into an ignored directory, not a Git submodule:
+        # a submodule would put an upstream gitlink and `.gitmodules` entry in this repo.
       - uses: actions/setup-node@v6
         if: needs.changes.outputs.product == 'true'
         with:
@@ -102,7 +103,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          submodules: recursive
+          # The upstream source is FETCHED into an ignored directory, not a Git submodule:
+        # a submodule would put an upstream gitlink and `.gitmodules` entry in this repo.
       - uses: actions/setup-node@v6
         with:
           node-version: 22.23.2
@@ -114,7 +116,9 @@ jobs:
         with:
           path: ${{ steps.yarn-cache.outputs.dir }}
           key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn fetch:upstream
       - run: yarn install --immutable
+      - run: yarn fetch:upstream
       - run: yarn workspace ${{ matrix.workspace }} check:win-package
       - name: Build Windows installer
         env:
@@ -142,7 +146,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          submodules: recursive
+          # The upstream source is FETCHED into an ignored directory, not a Git submodule:
+        # a submodule would put an upstream gitlink and `.gitmodules` entry in this repo.
       - uses: actions/setup-node@v6
         with:
           node-version: 22.23.2
@@ -154,7 +159,9 @@ jobs:
         with:
           path: ${{ steps.yarn-cache.outputs.dir }}
           key: yarn-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+      - run: yarn fetch:upstream
       - run: yarn install --immutable
+      - run: yarn fetch:upstream
       - run: yarn workspace ${{ matrix.workspace }} check:mac-package
       - name: Build macOS smoke artifact
         env:
@@ -171,7 +178,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          submodules: recursive
+          # The upstream source is FETCHED into an ignored directory, not a Git submodule:
+        # a submodule would put an upstream gitlink and `.gitmodules` entry in this repo.
       - uses: actions/setup-node@v6
         with:
           node-version: 22.23.2

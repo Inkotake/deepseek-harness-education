@@ -145,7 +145,7 @@ The registry currently holds eleven providers: six anonymous, four account-owned
 
 ```
 dsh-plugin-desktop/       Electron shell, Teacher runtime injection, and electron-builder packaging
-deepseek-harness/         Pinned upstream DeepSeek Harness submodule (read-only)
+deepseek-harness/         Fetched upstream DeepSeek Harness checkout (ignored, read-only)
 teacher/                  The Teacher layer: packages, skills, templates, vendor-skills, manifests, BUILD.md
 resources/teacher-seed/   Vendored plugin sources and their prebuilt, installable trees
 scripts/teacher/          Build, seed, prune, notice, vendoring, and verification scripts
@@ -167,7 +167,7 @@ electron-builder's `extraResources`. `dsh-plugin-desktop/dist/` is likewise a bu
 ## Building from source
 
 Building requires Node.js `^22.19.0` or `>=24.0.0`, Yarn 4.18.0 through Corepack, and Windows x64.
-Initialize the pinned upstream checkout first with `git submodule update --init --recursive`, then:
+Fetch the pinned upstream checkout first with `yarn fetch:upstream`, then:
 
 ```powershell
 corepack enable

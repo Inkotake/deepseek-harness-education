@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, lstatSync, readFileSync, readlinkSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const readJson = path => JSON.parse(readFileSync(resolve(root, path), 'utf8'))
@@ -70,11 +70,15 @@ for (const legacyFile of [
 ]) {
   if (existsSync(resolve(root, legacyFile))) fail(`${legacyFile} must not exist`)
 }
-if (run('git', ['config', '-f', '.gitmodules', '--get', 'submodule.deepseek-harness.path']) !== 'deepseek-harness') {
-  fail('the upstream submodule path must be deepseek-harness')
-}
-if (run('git', ['config', '-f', '.gitmodules', '--get', 'submodule.deepseek-harness.url']) !== upstream.repository) {
-  fail('the upstream submodule URL differs from upstream.json')
+// This fork must not carry an upstream Git relationship. A submodule would put a gitlink and a
+// `.gitmodules` entry in this repository, which advertises the upstream repository and hangs
+// upstream's history off ours. The source is fetched into an ignored directory instead
+// (`scripts/teacher/fetch-upstream.mjs`), so both of these must stay empty.
+const trackedUpstream = run('git', ['ls-files', '--stage', '--', 'deepseek-harness'])
+if (trackedUpstream !== '') fail('deepseek-harness must not be tracked in this repository')
+if (existsSync(resolve(root, '.gitmodules'))) {
+  const declared = run('git', ['config', '-f', '.gitmodules', '--get-regexp', '^submodule\\.'])
+  if (declared !== '') fail('this repository must not declare any Git submodule')
 }
 if (typeof upstreamPackage.packageManager !== 'string' || !upstreamPackage.packageManager.startsWith('pnpm@')) {
   fail('the upstream checkout must retain its pnpm package manager')
@@ -97,19 +101,20 @@ for (const [owner, manifest] of [
   }
 }
 
-const [mode, object] = run('git', ['ls-files', '--stage', '--', 'deepseek-harness']).split(/\s+/u)
-if (mode !== '160000') fail('deepseek-harness must be tracked as a Git submodule')
-if (object !== activeUpstream.commit) fail(`submodule index is ${object}, expected ${activeUpstream.commit}`)
-
 const upstreamDir = resolve(root, 'deepseek-harness')
+if (!existsSync(join(upstreamDir, '.git'))) {
+  fail('the upstream source is not fetched; run node scripts/teacher/fetch-upstream.mjs')
+}
 if (run('git', ['rev-parse', 'HEAD'], upstreamDir) !== activeUpstream.commit) {
-  fail('checked-out upstream commit differs from upstream.json')
+  fail('the fetched upstream commit differs from upstream.json')
 }
 if (run('git', ['status', '--porcelain'], upstreamDir) !== '') {
   fail('deepseek-harness contains local changes')
 }
+// The fetch clones from `upstream.json`, so the remote is the pin's source. That remote lives in
+// an ignored directory and is never part of this repository's history.
 if (run('git', ['remote', 'get-url', 'origin'], upstreamDir) !== upstream.repository) {
-  fail('deepseek-harness origin differs from upstream.json')
+  fail('the fetched upstream origin differs from upstream.json')
 }
 if (upstreamPackage.version !== activeUpstream.sourceVersion) {
   fail('deepseek-harness package version differs from upstream.json')

@@ -132,7 +132,7 @@ THIRD_PARTY_NOTICES.md    自动生成的组件与 npm 依赖清单
 ## 从源码构建
 
 需要 Node.js `^22.19.0` 或 `>=24.0.0`、经 Corepack 启用的 Yarn 4.18.0，以及 Windows x64。先用
-`git submodule update --init --recursive` 初始化固定的上游子模块，然后：
+`yarn fetch:upstream` 拉取固定的上游检出（它是被忽略的目录，不是 Git submodule），然后：
 
 ```powershell
 corepack enable

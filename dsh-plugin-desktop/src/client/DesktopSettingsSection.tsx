@@ -377,7 +377,12 @@ export function DesktopAdvancedModeRow({
   const [failed, setFailed] = useState(false)
   const [restartRequired, setRestartRequired] = useState(false)
   const labelId = useId()
-  const advanced = (desktop.value?.mode ?? initialMode) === 'advanced'
+  // Normalize the removed `extended` mode before comparing, exactly as the presentation chooser
+  // below does. Without it a settings document that still names `extended` renders this switch
+  // OFF while the application runs the advanced presentation — and that document is precisely
+  // the read-only case the durable migration is allowed to fail on.
+  const storedAdvancedMode = desktop.value?.mode ?? initialMode
+  const advanced = (storedAdvancedMode === 'extended' ? 'advanced' : storedAdvancedMode) === 'advanced'
   const disabled = platform === 'linux'
     || desktop.status !== 'ready'
     || !desktop.writable

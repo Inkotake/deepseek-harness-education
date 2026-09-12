@@ -79,7 +79,7 @@ export function DesktopOwnedFrame({ layout, mode, platform, renderSlot, SessionP
     collapsedSidebarWidth(mode, platform),
   )
   // Enhanced macOS keeps a wider native rail around the centered upstream
-  // sidebar. Extended mode and other platforms retain the upstream 56px rail.
+  // sidebar. Every other platform retains the upstream 56px rail.
   const sidebarOwnerWidth = collapsed ? SIDEBAR_COLLAPSED : columns.sidebar
   const columnsRef = useRef(columns)
   columnsRef.current = columns

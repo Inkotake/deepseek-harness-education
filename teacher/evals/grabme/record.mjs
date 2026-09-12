@@ -63,16 +63,24 @@ function parseArgv(argv) {
     profile: 'headless',
     timeoutSeconds: 600,
   }
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i]
+  /** Take the value that must follow a flag, failing loudly when it is missing. */
+  let index = 0
+  const valueAfter = (token) => {
+    const value = argv[index + 1]
+    if (value === undefined) throw new Error(`record: ${token} needs a value`)
+    index += 1
+    return value
+  }
+  for (index = 0; index < argv.length; index += 1) {
+    const token = argv[index]
     if (token === '--dry-run') options.dryRun = true
-    else if (token === '--home') options.home = argv[++i]
-    else if (token === '--dsh') options.dsh = argv[++i]
-    else if (token === '--profile') options.profile = argv[++i]
-    else if (token === '--timeout') options.timeoutSeconds = Number(argv[++i])
+    else if (token === '--home') options.home = valueAfter(token)
+    else if (token === '--dsh') options.dsh = valueAfter(token)
+    else if (token === '--profile') options.profile = valueAfter(token)
+    else if (token === '--timeout') options.timeoutSeconds = Number(valueAfter(token))
     // Repeatable pass-through for the launcher's own flags, e.g. a `--patch` overlay that makes a
     // generic gateway accept the request. The task stays the last positional.
-    else if (token === '--dsh-arg') options.dshArgs.push(argv[++i])
+    else if (token === '--dsh-arg') options.dshArgs.push(valueAfter(token))
     else if (options.caseId === undefined && !token.startsWith('--')) options.caseId = token
     else throw new Error(`record: unrecognised argument ${JSON.stringify(token)}`)
   }
@@ -99,8 +107,14 @@ function findCredential() {
  * quotes and all — to `cmd.exe` for re-parsing. `--dsh` takes this entry path, not a shim.
  */
 function findEntry(explicit) {
+  // An explicit path that does not exist must FAIL rather than fall through to the built-in
+  // entry: a typo, or a fixture that was never committed, would otherwise launch a real
+  // networked session from a caller that believes it is exercising a stub.
+  if (typeof explicit === 'string' && explicit !== '') {
+    if (!existsSync(explicit)) throw new Error(`record: --dsh entry not found: ${explicit}`)
+    return explicit
+  }
   const candidates = [
-    ...(typeof explicit === 'string' && explicit !== '' ? [explicit] : []),
     join(REPO, 'dsh-plugin-desktop', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
     join(REPO, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
   ]
@@ -149,7 +163,6 @@ function main() {
   const stamp = new Date().toISOString().replace(/[:.]/gu, '-')
   const home = resolve(options.home ?? join(HERE, '.runs', `${options.caseId}-${stamp}`, 'dsh-home'))
   const sessionRoot = join(home, 'sessions')
-  mkdirSync(sessionRoot, { recursive: true })
 
   const command = [entry, '--profile', options.profile, ...options.dshArgs, testCase.teacher_message]
 
@@ -173,6 +186,9 @@ function main() {
     console.error(`record: would have run — DSH_HOME=${home} node ${entry} --profile ${options.profile} <teacher_message>`)
     return SKIPPED_EXIT_CODE
   }
+
+  // Only a real run gets a home on disk; `--dry-run` promises that nothing is executed.
+  mkdirSync(sessionRoot, { recursive: true })
 
   console.log(`record: running case ${testCase.id} (${testCase.category})`)
   console.log(`record: credential from ${credential} · DSH_HOME=${home} · profile=${options.profile}`)
@@ -198,10 +214,12 @@ function main() {
     console.error(`--- stderr (tail) ---\n${result.stderr.trim().split('\n').slice(-12).join('\n')}\n`)
   }
 
-  const logs = findLogs(sessionRoot)
+  // `started` is the boundary, not the directory: with a reused `--home` the newest artifact
+  // may predate this run, and reporting it would present an unexercised case as a pass.
+  const logs = findLogs(sessionRoot).filter(log => statSync(log).mtimeMs >= started)
   if (logs.length === 0) {
     // Say exactly what this means rather than reporting a silent success.
-    console.error('record: no session log was written. The composition this profile booted may not')
+    console.error('record: this run wrote no session log. The composition this profile booted may not')
     console.error('record: mount @deepseek-ai/dsh-session-persistence-jsonl, so there is nothing to')
     console.error('record: score. dsh-base mounts it with root=<DSH_HOME>/sessions; check that the')
     console.error(`record: profile under test still includes that layer. (looked under ${sessionRoot})`)

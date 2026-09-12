@@ -8,8 +8,9 @@
  *    never exercised.
  * 2. `--dry-run` must need no credential at all, so the command can be inspected on any machine.
  *
- * The launch path itself is not covered here: exercising it needs a real provider credential, which
- * this repository does not carry. That is stated in the README rather than faked with a stub.
+ * The launch path itself is exercised against a stub launcher, never a real one: running a genuine
+ * session needs a provider credential this repository does not carry, so the stub proves the driver
+ * reaches the launch and reads its exit, not that a model answered.
  *
  * @module @teacher-dsh/grabme-evals/tests/record
  */
@@ -66,6 +67,22 @@ test('a configured credential changes the outcome, proving the skip is credentia
   })
   assert.notEqual(result.status, 3)
   assert.doesNotMatch(result.stderr, /NOT RUN/u)
+})
+
+test('an explicit --dsh that does not exist fails instead of launching the built-in entry', () => {
+  // Falling through would launch a real networked session from a caller that believes it is
+  // exercising a stub — so a bad path has to be an error, not a hint.
+  const result = runDriver([A_CASE, '--dsh', 'definitely/not/here.mjs'], {
+    DEEPSEEK_API_KEY: 'placeholder-not-a-real-key',
+  })
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /--dsh entry not found/u)
+})
+
+test('a flag with no value is rejected instead of reaching spawn as undefined', () => {
+  const result = runDriver([A_CASE, '--dsh-arg'])
+  assert.equal(result.status, 2)
+  assert.match(result.stderr, /needs a value/u)
 })
 
 test('an unknown case id fails with a distinct code instead of running something else', () => {

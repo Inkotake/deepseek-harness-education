@@ -1,11 +1,10 @@
 # MOUNT — how `@teacher-dsh/global-memory` reaches a profile
 
-**Applying this is the integrator's step.** Nothing in this package edits a profile, a
-seed, a build script, or a bundle. `deepseek-harness/` is a pinned upstream submodule and
-must not be written from a desktop feature branch
-(`deepseek-harness/AGENTS.md`, repository `AGENTS.md`), so the row below is a proposal, not
-an installed mount. Until it is applied, the six `memory_*` tools do not exist in any
-profile — the package only builds and tests on its own.
+**This row is applied.** It lives in `dsh-plugin-desktop/cordis.patch.yml`, the
+desktop-owned Host layer, and `scripts/teacher/build-teacher-runtime.mjs` stages the built
+package into `resources/teacher-runtime/global-memory/` while `build-profile-seed.mjs` links
+it into `profiles/desktop/node_modules` so the row resolves. The constraints below are what
+the mount has to keep satisfying, not a proposal awaiting an integrator.
 
 ---
 

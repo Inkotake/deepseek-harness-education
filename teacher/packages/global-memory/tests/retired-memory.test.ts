@@ -75,6 +75,13 @@ test('a retired value is no longer served by get, not even as an expired candida
   const { store } = makeStore(() => NOW)
   await retireTextbook(store)
 
+  // The row must still exist, or this test would pass for a DELETED row too and would not pin
+  // retirement at all. A retired row leaves retrieval; it does not leave the store.
+  assert.equal(
+    store.all().some(row => row.namespace === 'environment' && row.value === BELIEVED),
+    true,
+    'the audit row must survive even though it is not served',
+  )
   const plain = store.get({ namespace: 'environment', key: 'textbook_edition', nowIso: NOW })
   assert.equal(plain.found, false, 'a retired value must not be returned as live')
 
@@ -97,6 +104,12 @@ test('a retired value is absent from the listing behind 查看 AI 记住了什�
   // An empty query is not a filter; it lists everything the session may see, which
   // is what backs the control surface (README §13.1). A retired row must not appear,
   // or the teacher would be shown a memory that was already corrected away.
+  // Same reason as the get test: absence alone does not distinguish retirement from deletion.
+  assert.equal(
+    store.all().some(row => row.namespace === 'environment' && row.value === BELIEVED),
+    true,
+    'the audit row must survive even though the listing hides it',
+  )
   const listing = store.search({ query: '', nowIso: NOW })
   assert.equal(
     listing.records.some(record => record.key === 'textbook_edition'),

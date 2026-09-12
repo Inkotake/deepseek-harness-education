@@ -155,7 +155,7 @@ Cited by line so the implementation can be checked against the spec directly.
 
 ### 4.1 `schema.ts` type-checks in isolation — PASS
 
-Two runs, from `C:\Users\inkot\Desktop\kc\teacher-dsh-desktop`:
+Two runs, from the repository root:
 
 ```powershell
 node .\dsh-plugin-desktop\node_modules\typescript\lib\tsc.js --noEmit --strict `

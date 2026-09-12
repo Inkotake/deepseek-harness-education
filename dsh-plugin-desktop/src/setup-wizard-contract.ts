@@ -66,7 +66,9 @@ function hasExactKeys(value: Record<string, unknown>, expected: readonly string[
 }
 
 function isMode(value: unknown): value is DesktopSetupWizardMode {
-  return value === 'compatibility' || value === 'extended' || value === 'advanced'
+  // `extended` is deliberately absent: the type above no longer has it, and a predicate that
+  // accepts a value its own type rejects narrows a lie.
+  return value === 'compatibility' || value === 'advanced'
 }
 
 function isMacosMaterial(value: unknown): value is DesktopSetupWizardMacosMaterial {

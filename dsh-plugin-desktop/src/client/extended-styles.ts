@@ -1,4 +1,4 @@
-/** Independent frame shared by compatibility and inverted-L extended modes. */
+/** The framed Desktop chrome used by compatibility mode. */
 
 import {
   EXTENDED_INNER_CORNER_RADIUS,

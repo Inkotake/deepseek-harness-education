@@ -872,9 +872,14 @@ function stepDeploy() {
  * build skips the timestamp check.
  */
 function buildGlobalMemoryIfStale(packageDir, entry) {
-  const sources = ['schema.ts', ...fs.readdirSync(path.join(packageDir, 'src'))
-    .filter(name => name.endsWith('.ts'))
-    .map(name => path.join('src', name))]
+  // The build config counts as a source: changing `tsconfig.build.json`, `tsconfig.json` or
+  // the manifest's `main` with older sources would otherwise print "build is up to date" and
+  // ship the previous `lib`.
+  const sources = ['schema.ts', 'package.json', 'tsconfig.json', 'tsconfig.build.json',
+    ...fs.readdirSync(path.join(packageDir, 'src'))
+      .filter(name => name.endsWith('.ts'))
+      .map(name => path.join('src', name))]
+    .filter(name => fs.existsSync(path.join(packageDir, name)))
   const entryTime = fs.existsSync(entry) ? fs.statSync(entry).mtimeMs : -1
   let stale = entryTime < 0
   for (const source of sources) {

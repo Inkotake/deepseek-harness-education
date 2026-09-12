@@ -246,7 +246,9 @@ export class GlobalMemory extends Service {
     const store = this.requireStore()
     const nowIso = store.now()
     const questionKey = questionKeyOf(request.namespace, request.key)
-    const row = store.rowsFor(request.namespace, request.key)[0]
+    // A retired row is not a value to inherit a scope from, for the same reason it is not a known
+    // value in `consultQuestion`.
+    const row = store.rowsFor(request.namespace, request.key).find(candidate => !isRetired(candidate))
     const entry = nextLedgerEntry(store.ledgerEntry(questionKey), {
       questionKey,
       asked: request.asked,
